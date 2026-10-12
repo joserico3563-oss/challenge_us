@@ -1,0 +1,5960 @@
+// =============================================================================
+// ChallengeUs — lib/main.dart (archivo único)
+//
+// SECCIONES
+//  1. Arranque
+//  2. Tema (colores, textos, ThemeData)
+//  3. Utilidades
+//  4. Modelos
+//  5. Servicios (contratos + implementaciones mock)
+//  6. Datos mock
+//  7. Estado de la app (AppState / AppScope)
+//  8. Navegación (rutas y router)
+//  9. Widgets reutilizables
+// 10. Pantallas: Welcome, MainShell, Inicio, Detalle, Captura, Recompensa,
+//     Perfil, Bonche, Ranking, Tienda
+// =============================================================================
+
+import 'dart:async' show Timer, unawaited;
+import 'dart:io' show File;
+
+import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:permission_handler/permission_handler.dart';
+
+// =============================================================================
+// 1. ARRANQUE
+// =============================================================================
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setPreferredOrientations(const [
+    DeviceOrientation.portraitUp,
+  ]);
+  runApp(const ChallengeUsApp());
+}
+
+/// Raíz de la aplicación. Aquí se "conectan" los servicios: para pasar de
+/// datos mock a un backend real solo hay que cambiar las implementaciones
+/// de este bloque.
+class ChallengeUsApp extends StatefulWidget {
+  const ChallengeUsApp({super.key});
+
+  @override
+  State<ChallengeUsApp> createState() => _ChallengeUsAppState();
+}
+
+class _ChallengeUsAppState extends State<ChallengeUsApp> {
+  late final AppState _appState = AppState(
+    authService: const MockAuthService(),
+    challengeService: const MockChallengeService(),
+    validationService: const MockEvidenceValidationService(),
+    permissionService: const SystemPermissionService(),
+    groupService: const MockGroupService(),
+    rankingService: const MockRankingService(),
+    chatService: const MockChatService(),
+    storeService: const MockStoreService(),
+  );
+
+  @override
+  void dispose() {
+    _appState.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AppScope(
+      state: _appState,
+      child: MaterialApp(
+        title: 'ChallengeUs',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.dark,
+        darkTheme: AppTheme.dark,
+        themeMode: ThemeMode.dark,
+        initialRoute: AppRoutes.welcome,
+        onGenerateRoute: AppRouter.onGenerateRoute,
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// 2. TEMA
+// =============================================================================
+
+/// Paleta de ChallengeUs: negro/gris oscuro, amarillo de acción, verde para
+/// aprobado y rojo para errores.
+class AppColors {
+  AppColors._();
+
+  static const Color background = Color(0xFF0D0D0F);
+  static const Color surface = Color(0xFF17171B);
+  static const Color surfaceAlt = Color(0xFF212127);
+  static const Color border = Color(0xFF2C2C33);
+
+  static const Color yellow = Color(0xFFFFD60A);
+  static const Color yellowSoft = Color(0x26FFD60A);
+  static const Color onYellow = Color(0xFF111111);
+
+  static const Color textPrimary = Color(0xFFFFFFFF);
+  static const Color textSecondary = Color(0xFF9B9BA5);
+
+  static const Color success = Color(0xFF30D158);
+  static const Color error = Color(0xFFFF453A);
+  static const Color orange = Color(0xFFFF9F0A);
+  static const Color silver = Color(0xFFC4C4CC);
+}
+
+/// Estilos de texto reutilizables.
+class AppText {
+  AppText._();
+
+  static const TextStyle display = TextStyle(
+    fontSize: 28,
+    fontWeight: FontWeight.w800,
+    height: 1.15,
+    color: AppColors.textPrimary,
+  );
+  static const TextStyle title = TextStyle(
+    fontSize: 22,
+    fontWeight: FontWeight.w800,
+    color: AppColors.textPrimary,
+  );
+  static const TextStyle heading = TextStyle(
+    fontSize: 17,
+    fontWeight: FontWeight.w700,
+    color: AppColors.textPrimary,
+  );
+  static const TextStyle body = TextStyle(
+    fontSize: 15,
+    height: 1.45,
+    color: AppColors.textPrimary,
+  );
+  static const TextStyle bodyMuted = TextStyle(
+    fontSize: 14,
+    height: 1.45,
+    color: AppColors.textSecondary,
+  );
+  static const TextStyle label = TextStyle(
+    fontSize: 12,
+    fontWeight: FontWeight.w700,
+    letterSpacing: 0.3,
+    color: AppColors.textSecondary,
+  );
+}
+
+class AppTheme {
+  AppTheme._();
+
+  static ThemeData get dark {
+    const scheme = ColorScheme.dark(
+      primary: AppColors.yellow,
+      onPrimary: AppColors.onYellow,
+      secondary: AppColors.yellow,
+      onSecondary: AppColors.onYellow,
+      secondaryContainer: AppColors.yellow,
+      onSecondaryContainer: AppColors.onYellow,
+      surface: AppColors.surface,
+      onSurface: AppColors.textPrimary,
+      onSurfaceVariant: AppColors.textSecondary,
+      error: AppColors.error,
+      onError: Colors.white,
+      outline: AppColors.border,
+    );
+
+    return ThemeData(
+      useMaterial3: true,
+      colorScheme: scheme,
+      scaffoldBackgroundColor: AppColors.background,
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: AppColors.yellow,
+      ),
+      snackBarTheme: const SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.surfaceAlt,
+        contentTextStyle: AppText.body,
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.yellow,
+          foregroundColor: AppColors.onYellow,
+          disabledBackgroundColor: AppColors.surfaceAlt,
+          disabledForegroundColor: AppColors.textSecondary,
+          minimumSize: const Size.fromHeight(54),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: AppColors.textPrimary,
+          disabledForegroundColor: AppColors.textSecondary,
+          side: const BorderSide(color: AppColors.border),
+          minimumSize: const Size.fromHeight(54),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(foregroundColor: AppColors.yellow),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// 3. UTILIDADES
+// =============================================================================
+
+const List<String> kMonthsShort = [
+  'ene', 'feb', 'mar', 'abr', 'may', 'jun',
+  'jul', 'ago', 'sep', 'oct', 'nov', 'dic',
+];
+
+const List<String> kMonthsLong = [
+  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+];
+
+String two(int n) => n.toString().padLeft(2, '0');
+
+String formatClock(DateTime time) => '${two(time.hour)}:${two(time.minute)}';
+
+String initialsFromName(String name) {
+  final parts = name
+      .trim()
+      .split(RegExp(r'\s+'))
+      .where((part) => part.isNotEmpty)
+      .toList();
+  if (parts.isEmpty) return '?';
+  if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
+  return (parts[0].substring(0, 1) + parts[1].substring(0, 1)).toUpperCase();
+}
+
+String formatRemaining(Duration duration) {
+  final totalMinutes = (duration.inSeconds + 59) ~/ 60;
+  if (totalMinutes <= 0) return 'menos de 1 min';
+  final hours = totalMinutes ~/ 60;
+  final minutes = totalMinutes % 60;
+  if (hours > 0) return minutes == 0 ? '$hours h' : '$hours h $minutes min';
+  return '$minutes min';
+}
+
+String windowLabel(int minutes) {
+  final hours = minutes ~/ 60;
+  final rest = minutes % 60;
+  if (hours > 0) return rest == 0 ? '$hours h' : '$hours h $rest min';
+  return '$rest min';
+}
+
+String rangeLabel(DateTime start, DateTime end) {
+  final startMonth = kMonthsShort[start.month - 1];
+  final endMonth = kMonthsShort[end.month - 1];
+  if (start.month == end.month) return '${start.day}–${end.day} $endMonth';
+  return '${start.day} $startMonth – ${end.day} $endMonth';
+}
+
+// =============================================================================
+// 4. MODELOS
+// =============================================================================
+
+// --- Permisos ----------------------------------------------------------------
+
+/// Permisos del sistema que ChallengeUs puede necesitar. Para añadir uno
+/// nuevo basta con agregarlo aquí y en [SystemPermissionService].
+enum AppPermission {
+  camera(
+    label: 'cámara',
+    rationale:
+        'ChallengeUs usa la cámara para que captures la evidencia de tus retos '
+        'en el momento. No se usa la galería: cada evidencia se toma aquí mismo.',
+  ),
+  microphone(
+    label: 'micrófono',
+    rationale:
+        'ChallengeUs usa el micrófono solo dentro de los retos de voz, '
+        'para grabar tu doblaje.',
+  );
+
+  const AppPermission({required this.label, required this.rationale});
+
+  final String label;
+  final String rationale;
+}
+
+/// Resultado simplificado y común a cualquier permiso.
+enum PermissionOutcome { granted, denied, permanentlyDenied, restricted }
+
+// --- Retos -------------------------------------------------------------------
+
+enum ChallengeCategory {
+  observacion('Observación'),
+  creatividad('Creatividad'),
+  movimiento('Movimiento'),
+  ingenio('Ingenio');
+
+  const ChallengeCategory(this.label);
+  final String label;
+}
+
+enum ChallengeDifficulty {
+  facil('Fácil'),
+  medio('Medio'),
+  dificil('Difícil');
+
+  const ChallengeDifficulty(this.label);
+  final String label;
+}
+
+/// Tipo de evidencia que pide un reto (hoy solo se usa la foto).
+enum EvidenceType { photo, drawing, voice }
+
+/// Estado personal del usuario frente a un reto.
+enum ChallengeStatus { available, upcoming, completed, expired }
+
+class Challenge {
+  const Challenge({
+    required this.id,
+    required this.title,
+    required this.objective,
+    required this.description,
+    required this.rules,
+    required this.category,
+    required this.difficulty,
+    required this.evidenceType,
+    required this.points,
+    required this.xpReward,
+    required this.coinReward,
+    required this.startsAt,
+    required this.endsAt,
+    required this.completedBy,
+    required this.totalMembers,
+    this.requiredPermissions = const [AppPermission.camera],
+  });
+
+  final String id;
+  final String title;
+  final String objective;
+  final String description;
+  final List<String> rules;
+  final ChallengeCategory category;
+  final ChallengeDifficulty difficulty;
+  final EvidenceType evidenceType;
+
+  /// Permisos que hay que tener concedidos antes de capturar la evidencia.
+  final List<AppPermission> requiredPermissions;
+
+  final int points;
+  final int xpReward;
+  final int coinReward;
+  final DateTime startsAt;
+  final DateTime endsAt;
+
+  /// Integrantes del grupo que ya lo completaron (sin contar al usuario).
+  final int completedBy;
+  final int totalMembers;
+
+  Duration timeLeft(DateTime now) => endsAt.difference(now);
+  Duration timeUntilStart(DateTime now) => startsAt.difference(now);
+}
+
+// --- Usuario y niveles -------------------------------------------------------
+
+class UserProfile {
+  const UserProfile({
+    required this.id,
+    required this.displayName,
+    required this.email,
+    this.xp = 0,
+    this.coins = 0,
+    this.streak = 0,
+    this.bestStreak = 0,
+    this.completedChallenges = 0,
+  });
+
+  static const UserProfile empty =
+      UserProfile(id: '', displayName: '', email: '');
+
+  final String id;
+  final String displayName;
+  final String email;
+  final int xp;
+  final int coins;
+  final int streak;
+  final int bestStreak;
+  final int completedChallenges;
+
+  String get firstName {
+    final parts = displayName
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .toList();
+    return parts.isEmpty ? 'Jugador' : parts.first;
+  }
+
+  String get initials => initialsFromName(displayName);
+
+  UserProfile copyWith({
+    int? xp,
+    int? coins,
+    int? streak,
+    int? bestStreak,
+    int? completedChallenges,
+  }) {
+    return UserProfile(
+      id: id,
+      displayName: displayName,
+      email: email,
+      xp: xp ?? this.xp,
+      coins: coins ?? this.coins,
+      streak: streak ?? this.streak,
+      bestStreak: bestStreak ?? this.bestStreak,
+      completedChallenges: completedChallenges ?? this.completedChallenges,
+    );
+  }
+}
+
+/// Información de nivel calculada a partir del XP total.
+class LevelInfo {
+  const LevelInfo({
+    required this.level,
+    required this.title,
+    required this.xpIntoLevel,
+    required this.xpForNextLevel,
+  });
+
+  final int level;
+  final String title;
+  final int xpIntoLevel;
+  final int xpForNextLevel;
+
+  double get progress => xpIntoLevel / xpForNextLevel;
+  int get xpRemaining => xpForNextLevel - xpIntoLevel;
+}
+
+/// Sistema de niveles (distinto del sistema de insignias).
+class LevelSystem {
+  LevelSystem._();
+
+  static const int xpPerLevel = 100;
+
+  static const List<String> _titles = [
+    'Recién llegado',
+    'Parcero',
+    'Bonchero',
+    'Gran Bonchero',
+    'Maestro de la Terraza',
+  ];
+
+  static LevelInfo fromXp(int xp) {
+    final safeXp = xp < 0 ? 0 : xp;
+    final level = safeXp ~/ xpPerLevel + 1;
+    final titleIndex =
+        level - 1 < _titles.length ? level - 1 : _titles.length - 1;
+    return LevelInfo(
+      level: level,
+      title: _titles[titleIndex],
+      xpIntoLevel: safeXp % xpPerLevel,
+      xpForNextLevel: xpPerLevel,
+    );
+  }
+}
+
+// --- Evidencia y recompensa --------------------------------------------------
+
+/// Evidencia capturada con la cámara de la app para un reto.
+class Evidence {
+  const Evidence({
+    required this.id,
+    required this.challengeId,
+    required this.filePath,
+    required this.type,
+    required this.capturedAt,
+  });
+
+  final String id;
+  final String challengeId;
+  final String filePath;
+  final EvidenceType type;
+  final DateTime capturedAt;
+}
+
+/// Resultado de validar una evidencia (hoy mock; mañana IA o el grupo).
+class ValidationResult {
+  const ValidationResult({required this.approved, required this.message});
+
+  final bool approved;
+  final String message;
+}
+
+/// Resultado final mostrado en la pantalla de recompensa.
+class RewardResult {
+  const RewardResult({
+    required this.approved,
+    required this.message,
+    required this.challengeTitle,
+    this.xpGained = 0,
+    this.coinsGained = 0,
+    this.streak = 0,
+    this.leveledUp = false,
+    this.level = 1,
+    this.levelTitle = '',
+    this.doubleXpUsed = false,
+  });
+
+  factory RewardResult.rejected({
+    required String challengeTitle,
+    required String message,
+  }) {
+    return RewardResult(
+      approved: false,
+      message: message,
+      challengeTitle: challengeTitle,
+    );
+  }
+
+  final bool approved;
+  final String message;
+  final String challengeTitle;
+  final int xpGained;
+  final int coinsGained;
+  final int streak;
+  final bool leveledUp;
+  final int level;
+  final String levelTitle;
+  final bool doubleXpUsed;
+}
+
+// --- Bonche (grupo) y chat ---------------------------------------------------
+
+class GroupMember {
+  const GroupMember({
+    required this.id,
+    required this.name,
+    required this.level,
+    required this.streak,
+  });
+
+  final String id;
+  final String name;
+  final int level;
+  final int streak;
+
+  String get initials => initialsFromName(name);
+
+  String get firstName {
+    final parts = name
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .toList();
+    return parts.isEmpty ? 'Jugador' : parts.first;
+  }
+
+  GroupMember copyWith({String? name, int? level, int? streak}) {
+    return GroupMember(
+      id: id,
+      name: name ?? this.name,
+      level: level ?? this.level,
+      streak: streak ?? this.streak,
+    );
+  }
+}
+
+class GroupSchedule {
+  const GroupSchedule({
+    required this.hour,
+    required this.minute,
+    required this.availableMembers,
+  });
+
+  final int hour;
+  final int minute;
+  final int availableMembers;
+
+  String get label => '${two(hour)}:${two(minute)}';
+}
+
+class GroupInfo {
+  const GroupInfo({
+    required this.name,
+    required this.tagline,
+    required this.createdAt,
+    required this.leaderId,
+    required this.inviteCode,
+    required this.dailyChallenges,
+    required this.windowMinutes,
+    required this.schedules,
+    required this.categories,
+    required this.members,
+  });
+
+  final String name;
+  final String tagline;
+  final DateTime createdAt;
+  final String leaderId;
+  final String inviteCode;
+  final int dailyChallenges;
+  final int windowMinutes;
+  final List<GroupSchedule> schedules;
+  final List<ChallengeCategory> categories;
+  final List<GroupMember> members;
+}
+
+class ChatMessage {
+  const ChatMessage({
+    required this.id,
+    required this.authorId,
+    required this.text,
+    required this.sentAt,
+  });
+
+  /// Mensaje automático del sistema (por ejemplo, "X completó un reto").
+  factory ChatMessage.system({
+    required String id,
+    required String text,
+    required DateTime sentAt,
+  }) {
+    return ChatMessage(id: id, authorId: null, text: text, sentAt: sentAt);
+  }
+
+  final String id;
+  final String? authorId;
+  final String text;
+  final DateTime sentAt;
+
+  bool get isSystem => authorId == null;
+}
+
+// --- Ranking -----------------------------------------------------------------
+
+enum RankingPeriod { weekly, monthly }
+
+class RankingEntry {
+  const RankingEntry({
+    required this.memberId,
+    required this.points,
+    required this.completed,
+    required this.wins,
+    required this.previousRank,
+  });
+
+  final String memberId;
+  final int points;
+  final int completed;
+  final int wins;
+  final int previousRank;
+
+  RankingEntry copyWith({int? points, int? completed}) {
+    return RankingEntry(
+      memberId: memberId,
+      points: points ?? this.points,
+      completed: completed ?? this.completed,
+      wins: wins,
+      previousRank: previousRank,
+    );
+  }
+}
+
+class HistoryEntry {
+  const HistoryEntry({
+    required this.label,
+    required this.winnerId,
+    required this.userRank,
+    required this.userPoints,
+  });
+
+  final String label;
+  final String winnerId;
+  final int userRank;
+  final int userPoints;
+}
+
+class RankingBoard {
+  const RankingBoard({
+    required this.period,
+    required this.periodLabel,
+    required this.resetLabel,
+    required this.entries,
+    required this.totalChallenges,
+    required this.chartLabels,
+    required this.userSeries,
+    required this.groupSeries,
+    required this.history,
+  });
+
+  final RankingPeriod period;
+  final String periodLabel;
+  final String resetLabel;
+  final List<RankingEntry> entries;
+  final int totalChallenges;
+  final List<String> chartLabels;
+  final List<double> userSeries;
+  final List<double> groupSeries;
+  final List<HistoryEntry> history;
+}
+
+// --- Tienda ------------------------------------------------------------------
+
+enum StoreItemKind { advantage, reward }
+
+enum PurchaseResult { success, insufficientCoins, alreadyOwned }
+
+class StoreItem {
+  const StoreItem({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.price,
+    required this.icon,
+    required this.kind,
+    this.oneTime = false,
+  });
+
+  /// Única ventaja con efecto real por ahora: duplica el XP del próximo reto.
+  static const String doubleXpId = 'double_xp';
+
+  final String id;
+  final String name;
+  final String description;
+  final int price;
+  final IconData icon;
+  final StoreItemKind kind;
+
+  /// Si es true solo se puede comprar una vez (cosméticos).
+  final bool oneTime;
+
+  bool get appliesAutomatically => id == doubleXpId;
+}
+
+// =============================================================================
+// 5. SERVICIOS (contratos + implementaciones mock)
+// =============================================================================
+
+abstract class AuthService {
+  Future<UserProfile> signInWithGoogle();
+
+  Future<UserProfile> signInWithEmail({
+    required String email,
+    required String password,
+  });
+
+  Future<void> signOut();
+}
+
+class MockAuthService implements AuthService {
+  const MockAuthService();
+
+  @override
+  Future<UserProfile> signInWithGoogle() async {
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    return MockData.userFor(
+      email: 'daniel@gmail.com',
+      displayName: 'Daniel Escudero',
+    );
+  }
+
+  @override
+  Future<UserProfile> signInWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    return MockData.userFor(email: email.trim());
+  }
+
+  @override
+  Future<void> signOut() async {
+    await Future<void>.delayed(const Duration(milliseconds: 200));
+  }
+}
+
+abstract class ChallengeService {
+  Future<List<Challenge>> fetchTodayChallenges();
+}
+
+class MockChallengeService implements ChallengeService {
+  const MockChallengeService();
+
+  @override
+  Future<List<Challenge>> fetchTodayChallenges() async {
+    await Future<void>.delayed(const Duration(milliseconds: 500));
+    return MockData.todayChallenges(DateTime.now());
+  }
+}
+
+/// Aquí se enchufará el reconocimiento de imagen o la votación del grupo.
+abstract class EvidenceValidationService {
+  Future<ValidationResult> validate({
+    required Challenge challenge,
+    required Evidence evidence,
+  });
+}
+
+class MockEvidenceValidationService implements EvidenceValidationService {
+  const MockEvidenceValidationService();
+
+  @override
+  Future<ValidationResult> validate({
+    required Challenge challenge,
+    required Evidence evidence,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 900));
+    return const ValidationResult(
+      approved: true,
+      message: 'Evidencia aprobada',
+    );
+  }
+}
+
+/// Acceso a permisos del sistema, independiente del plugin concreto.
+abstract class PermissionService {
+  /// Estado actual sin mostrar ningún diálogo.
+  Future<PermissionOutcome> check(AppPermission permission);
+
+  /// Muestra el diálogo REAL de Android (si el sistema aún lo permite).
+  Future<PermissionOutcome> request(AppPermission permission);
+
+  /// Abre los ajustes de la app en el sistema.
+  Future<bool> openSettings();
+}
+
+class SystemPermissionService implements PermissionService {
+  const SystemPermissionService();
+
+  Permission _toPlugin(AppPermission permission) {
+    switch (permission) {
+      case AppPermission.camera:
+        return Permission.camera;
+      case AppPermission.microphone:
+        return Permission.microphone;
+    }
+  }
+
+  PermissionOutcome _toOutcome(PermissionStatus status) {
+    if (status.isGranted || status.isLimited) return PermissionOutcome.granted;
+    if (status.isPermanentlyDenied) return PermissionOutcome.permanentlyDenied;
+    if (status.isRestricted) return PermissionOutcome.restricted;
+    return PermissionOutcome.denied;
+  }
+
+  @override
+  Future<PermissionOutcome> check(AppPermission permission) async {
+    final status = await _toPlugin(permission).status;
+    return _toOutcome(status);
+  }
+
+  @override
+  Future<PermissionOutcome> request(AppPermission permission) async {
+    final status = await _toPlugin(permission).request();
+    return _toOutcome(status);
+  }
+
+  @override
+  Future<bool> openSettings() => openAppSettings();
+}
+
+/// Grupo privado (Bonche). Un backend real lo reemplazará más adelante.
+abstract class GroupService {
+  Future<GroupInfo> fetchGroup();
+}
+
+class MockGroupService implements GroupService {
+  const MockGroupService();
+
+  @override
+  Future<GroupInfo> fetchGroup() async {
+    await Future<void>.delayed(const Duration(milliseconds: 350));
+    return MockData.group(DateTime.now());
+  }
+}
+
+abstract class RankingService {
+  Future<RankingBoard> fetchBoard(RankingPeriod period, DateTime now);
+}
+
+class MockRankingService implements RankingService {
+  const MockRankingService();
+
+  @override
+  Future<RankingBoard> fetchBoard(RankingPeriod period, DateTime now) async {
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    return MockData.rankingBoard(period, now);
+  }
+}
+
+/// Chat del Bonche. Por ahora simulado; un servidor lo reemplazará después.
+abstract class ChatService {
+  Future<List<ChatMessage>> fetchMessages();
+
+  Future<ChatMessage> replyTo({
+    required String text,
+    required List<GroupMember> members,
+    required String excludeId,
+    required int seed,
+  });
+}
+
+class MockChatService implements ChatService {
+  const MockChatService();
+
+  static const List<String> _replies = [
+    'Jajaja, eso es tener actitud.',
+    'Ya voy yo también, no me dejen atrás.',
+    'Eso, parcero, así se hace.',
+    '¿Quién va ganando esta semana? Me toca remontar.',
+    'Hoy sí que se puso buena la cosa.',
+  ];
+
+  @override
+  Future<List<ChatMessage>> fetchMessages() async {
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    return MockData.chatMessages(DateTime.now());
+  }
+
+  @override
+  Future<ChatMessage> replyTo({
+    required String text,
+    required List<GroupMember> members,
+    required String excludeId,
+    required int seed,
+  }) async {
+    final candidates = members.where((m) => m.id != excludeId).toList();
+    final author =
+        candidates.isEmpty ? null : candidates[seed % candidates.length];
+    return ChatMessage(
+      id: 'r-${DateTime.now().microsecondsSinceEpoch}',
+      authorId: author?.id,
+      text: _replies[seed % _replies.length],
+      sentAt: DateTime.now(),
+    );
+  }
+}
+
+abstract class StoreService {
+  Future<List<StoreItem>> fetchItems();
+}
+
+class MockStoreService implements StoreService {
+  const MockStoreService();
+
+  @override
+  Future<List<StoreItem>> fetchItems() async {
+    await Future<void>.delayed(const Duration(milliseconds: 250));
+    return MockData.storeItems();
+  }
+}
+
+// =============================================================================
+// 6. DATOS MOCK
+// =============================================================================
+
+/// Datos locales de ejemplo. Los horarios se calculan respecto a "ahora" para
+/// que siempre haya un reto activo al probar la app.
+class MockData {
+  MockData._();
+
+  static const int groupSize = 5;
+
+  // --- Usuario ---------------------------------------------------------------
+
+  static UserProfile userFor({required String email, String? displayName}) {
+    return UserProfile(
+      id: 'u-001',
+      displayName: displayName ?? _nameFromEmail(email),
+      email: email,
+      xp: 85,
+      coins: 120,
+      streak: 4,
+      bestStreak: 7,
+      completedChallenges: 12,
+    );
+  }
+
+  static String _nameFromEmail(String email) {
+    final local =
+        email.split('@').first.replaceAll(RegExp(r'[._\-]+'), ' ').trim();
+    if (local.isEmpty) return 'Jugador';
+    return local
+        .split(' ')
+        .where((word) => word.isNotEmpty)
+        .map((word) => word.substring(0, 1).toUpperCase() + word.substring(1))
+        .join(' ');
+  }
+
+  // --- Retos -----------------------------------------------------------------
+
+  static List<Challenge> todayChallenges(DateTime now) {
+    return [
+      Challenge(
+        id: 'ch-001',
+        title: 'Dame un color',
+        objective: 'Fotografía algo de color amarillo que tengas cerca.',
+        description:
+            'Busca a tu alrededor un objeto amarillo y tómale una foto clara. '
+            'Vale cualquier cosa: una fruta, una prenda, un cuaderno... lo '
+            'importante es que el color se note.',
+        rules: const [
+          'La foto se toma en el momento, dentro de la app.',
+          'El objeto amarillo debe ocupar buena parte del encuadre.',
+          'No vale fotografiar otra pantalla ni otra foto.',
+          'Una sola evidencia por reto.',
+        ],
+        category: ChallengeCategory.observacion,
+        difficulty: ChallengeDifficulty.facil,
+        evidenceType: EvidenceType.photo,
+        points: 100,
+        xpReward: 40,
+        coinReward: 25,
+        startsAt: now.subtract(const Duration(minutes: 15)),
+        endsAt: now.add(const Duration(hours: 1, minutes: 45)),
+        completedBy: 3,
+        totalMembers: groupSize,
+      ),
+      Challenge(
+        id: 'ch-002',
+        title: 'Arte con lo que hay',
+        objective: 'Arma una mini escena creativa con tres objetos.',
+        description:
+            'Junta tres objetos que tengas a la mano y organízalos como si '
+            'fueran una pequeña obra de arte. Gana la composición más original.',
+        rules: const [
+          'Usa exactamente tres objetos.',
+          'La foto debe tomarse dentro de la app.',
+          'Se vale ser gracioso, pero que se entienda la idea.',
+        ],
+        category: ChallengeCategory.creatividad,
+        difficulty: ChallengeDifficulty.medio,
+        evidenceType: EvidenceType.photo,
+        points: 150,
+        xpReward: 60,
+        coinReward: 40,
+        startsAt: now.add(const Duration(hours: 3)),
+        endsAt: now.add(const Duration(hours: 4, minutes: 30)),
+        completedBy: 0,
+        totalMembers: groupSize,
+      ),
+      Challenge(
+        id: 'ch-003',
+        title: 'Mano amiga',
+        objective:
+            'Foto de tu mano sosteniendo el objeto más raro que encuentres.',
+        description:
+            'Se trata de ingenio: busca el objeto más inesperado de tu casa y '
+            'muéstralo sostenido en tu mano.',
+        rules: const [
+          'En la foto debe verse tu mano y el objeto.',
+          'Foto tomada dentro de la app.',
+        ],
+        category: ChallengeCategory.ingenio,
+        difficulty: ChallengeDifficulty.dificil,
+        evidenceType: EvidenceType.photo,
+        points: 200,
+        xpReward: 80,
+        coinReward: 55,
+        startsAt: now.subtract(const Duration(hours: 6)),
+        endsAt: now.subtract(const Duration(hours: 4)),
+        completedBy: 4,
+        totalMembers: groupSize,
+      ),
+    ];
+  }
+
+  // --- Bonche ----------------------------------------------------------------
+
+  static GroupInfo group(DateTime now) {
+    return GroupInfo(
+      name: 'Los de la Terraza',
+      tagline: 'Retos, risas y parche todos los días',
+      createdAt: DateTime(now.year, now.month - 2, 12),
+      leaderId: 'u-002',
+      inviteCode: 'TERRAZA-48K2',
+      dailyChallenges: 3,
+      windowMinutes: 90,
+      schedules: const [
+        GroupSchedule(hour: 10, minute: 0, availableMembers: 5),
+        GroupSchedule(hour: 15, minute: 30, availableMembers: 4),
+        GroupSchedule(hour: 20, minute: 0, availableMembers: 5),
+      ],
+      categories: const [
+        ChallengeCategory.observacion,
+        ChallengeCategory.creatividad,
+        ChallengeCategory.movimiento,
+        ChallengeCategory.ingenio,
+      ],
+      members: const [
+        GroupMember(id: 'u-001', name: 'Daniel Escudero', level: 1, streak: 4),
+        GroupMember(id: 'u-002', name: 'Mateo Ríos', level: 6, streak: 12),
+        GroupMember(id: 'u-003', name: 'Miguel Rodríguez', level: 5, streak: 8),
+        GroupMember(id: 'u-004', name: 'Levis Ortiz', level: 4, streak: 3),
+        GroupMember(id: 'u-005', name: 'José Rico', level: 3, streak: 5),
+      ],
+    );
+  }
+
+  static List<ChatMessage> chatMessages(DateTime now) {
+    return [
+      ChatMessage(
+        id: 'm-1',
+        authorId: 'u-002',
+        text: 'Buenas, bonche. Hoy hay reto de colores, a ver quién lo saca primero.',
+        sentAt: now.subtract(const Duration(minutes: 95)),
+      ),
+      ChatMessage(
+        id: 'm-2',
+        authorId: 'u-003',
+        text: 'Yo ya vi algo amarillo en la cocina. Ahorita lo hago.',
+        sentAt: now.subtract(const Duration(minutes: 80)),
+      ),
+      ChatMessage.system(
+        id: 'm-3',
+        text: 'Camila completó "Dame un color"',
+        sentAt: now.subtract(const Duration(minutes: 62)),
+      ),
+      ChatMessage(
+        id: 'm-4',
+        authorId: 'u-004',
+        text: 'Esa va a estar peleada, Mateo.',
+        sentAt: now.subtract(const Duration(minutes: 40)),
+      ),
+      ChatMessage(
+        id: 'm-5',
+        authorId: 'u-005',
+        text: 'Se me acabó el amarillo, tocó improvisar.',
+        sentAt: now.subtract(const Duration(minutes: 20)),
+      ),
+    ];
+  }
+
+  // --- Ranking ---------------------------------------------------------------
+
+  static RankingBoard rankingBoard(RankingPeriod period, DateTime now) {
+    return period == RankingPeriod.weekly ? _weeklyBoard(now) : _monthlyBoard(now);
+  }
+
+  /// Serie acumulada hasta [lastIndex], escalada para que el último valor
+  /// coincida con [total].
+  static List<double> _cumulative(
+    List<double> weights,
+    int lastIndex,
+    double total,
+  ) {
+    final slice = weights.sublist(0, lastIndex + 1);
+    var sum = 0.0;
+    for (final weight in slice) {
+      sum += weight;
+    }
+    final result = <double>[];
+    var running = 0.0;
+    for (final weight in slice) {
+      running += weight;
+      result.add(sum == 0 ? 0 : running / sum * total);
+    }
+    return result;
+  }
+
+  static RankingBoard _weeklyBoard(DateTime now) {
+    final today = DateTime(now.year, now.month, now.day);
+    final monday =
+        DateTime(today.year, today.month, today.day - (today.weekday - 1));
+    final sunday = DateTime(monday.year, monday.month, monday.day + 6);
+    final nextMonday = DateTime(monday.year, monday.month, monday.day + 7);
+    final daysLeft = nextMonday.difference(today).inDays;
+    final todayIndex = today.weekday - 1;
+
+    const entries = [
+      RankingEntry(memberId: 'u-002', points: 460, completed: 9, wins: 3, previousRank: 1),
+      RankingEntry(memberId: 'u-003', points: 390, completed: 8, wins: 2, previousRank: 2),
+      RankingEntry(memberId: 'u-001', points: 310, completed: 6, wins: 1, previousRank: 3),
+      RankingEntry(memberId: 'u-004', points: 280, completed: 5, wins: 1, previousRank: 4),
+      RankingEntry(memberId: 'u-005', points: 190, completed: 4, wins: 0, previousRank: 5),
+    ];
+
+    final userBase =
+        entries.firstWhere((e) => e.memberId == 'u-001').points.toDouble();
+    final groupAverage =
+        entries.fold<int>(0, (sum, e) => sum + e.points) / entries.length;
+
+    const winners = ['u-002', 'u-003', 'u-001', 'u-002'];
+    const ranks = [3, 2, 1, 4];
+    const points = [355, 402, 476, 290];
+    final history = <HistoryEntry>[];
+    for (var k = 1; k <= 4; k++) {
+      final start = DateTime(monday.year, monday.month, monday.day - 7 * k);
+      final end = DateTime(start.year, start.month, start.day + 6);
+      history.add(HistoryEntry(
+        label: 'Sem. ${rangeLabel(start, end)}',
+        winnerId: winners[k - 1],
+        userRank: ranks[k - 1],
+        userPoints: points[k - 1],
+      ));
+    }
+
+    return RankingBoard(
+      period: RankingPeriod.weekly,
+      periodLabel: 'Semana del ${rangeLabel(monday, sunday)}',
+      resetLabel: daysLeft <= 1
+          ? 'Se reinicia mañana (lunes)'
+          : 'Se reinicia en $daysLeft días (lunes)',
+      entries: entries,
+      totalChallenges: 12,
+      chartLabels: const ['L', 'M', 'X', 'J', 'V', 'S', 'D'],
+      userSeries: _cumulative(
+        const [0.8, 1.0, 1.4, 0.6, 1.2, 1.5, 1.0],
+        todayIndex,
+        userBase,
+      ),
+      groupSeries: _cumulative(
+        const [1.0, 1.1, 1.0, 1.2, 1.0, 1.3, 0.9],
+        todayIndex,
+        groupAverage,
+      ),
+      history: history,
+    );
+  }
+
+  static RankingBoard _monthlyBoard(DateTime now) {
+    final today = DateTime(now.year, now.month, now.day);
+    final next = DateTime(now.year, now.month + 1, 1);
+    final daysLeft = next.difference(today).inDays;
+    final weekIndex = ((today.day - 1) ~/ 7) > 3 ? 3 : (today.day - 1) ~/ 7;
+
+    const entries = [
+      RankingEntry(memberId: 'u-002', points: 1840, completed: 38, wins: 11, previousRank: 1),
+      RankingEntry(memberId: 'u-003', points: 1610, completed: 34, wins: 9, previousRank: 2),
+      RankingEntry(memberId: 'u-001', points: 1420, completed: 29, wins: 6, previousRank: 3),
+      RankingEntry(memberId: 'u-004', points: 1250, completed: 26, wins: 5, previousRank: 4),
+      RankingEntry(memberId: 'u-005', points: 980, completed: 21, wins: 3, previousRank: 5),
+    ];
+
+    final userBase =
+        entries.firstWhere((e) => e.memberId == 'u-001').points.toDouble();
+    final groupAverage =
+        entries.fold<int>(0, (sum, e) => sum + e.points) / entries.length;
+
+    const winners = ['u-002', 'u-003', 'u-001'];
+    const ranks = [3, 2, 1];
+    const points = [1390, 1540, 1710];
+    final history = <HistoryEntry>[];
+    for (var k = 1; k <= 3; k++) {
+      final month = DateTime(now.year, now.month - k, 1);
+      history.add(HistoryEntry(
+        label: '${kMonthsLong[month.month - 1]} ${month.year}',
+        winnerId: winners[k - 1],
+        userRank: ranks[k - 1],
+        userPoints: points[k - 1],
+      ));
+    }
+
+    return RankingBoard(
+      period: RankingPeriod.monthly,
+      periodLabel: '${kMonthsLong[now.month - 1]} ${now.year}',
+      resetLabel: daysLeft <= 1
+          ? 'Cierra mañana'
+          : 'Cierra en $daysLeft días · se reinicia el 1 de ${kMonthsLong[next.month - 1].toLowerCase()}',
+      entries: entries,
+      totalChallenges: 45,
+      chartLabels: const ['S1', 'S2', 'S3', 'S4'],
+      userSeries: _cumulative(const [1.0, 1.2, 1.1, 1.3], weekIndex, userBase),
+      groupSeries:
+          _cumulative(const [1.0, 1.1, 1.0, 1.2], weekIndex, groupAverage),
+      history: history,
+    );
+  }
+
+  // --- Tienda ----------------------------------------------------------------
+
+  static List<StoreItem> storeItems() {
+    return const [
+      StoreItem(
+        id: StoreItem.doubleXpId,
+        name: 'Doble XP',
+        description: 'Tu próximo reto completado te da el doble de XP.',
+        price: 90,
+        icon: Icons.bolt_rounded,
+        kind: StoreItemKind.advantage,
+      ),
+      StoreItem(
+        id: 'streak_shield',
+        name: 'Escudo de racha',
+        description: 'Protege tu racha si un día no alcanzas a completar el reto.',
+        price: 120,
+        icon: Icons.shield_rounded,
+        kind: StoreItemKind.advantage,
+      ),
+      StoreItem(
+        id: 'extra_time',
+        name: 'Tiempo extra',
+        description: '30 minutos más en la ventana de un reto.',
+        price: 60,
+        icon: Icons.more_time_rounded,
+        kind: StoreItemKind.advantage,
+      ),
+      StoreItem(
+        id: 'swap_challenge',
+        name: 'Cambio de reto',
+        description: 'Cambia un reto que no te guste por otro de su misma dificultad.',
+        price: 80,
+        icon: Icons.swap_horiz_rounded,
+        kind: StoreItemKind.advantage,
+      ),
+      StoreItem(
+        id: 'pick_challenge',
+        name: 'Tú eliges',
+        description: 'Propón el próximo reto para todo el bonche.',
+        price: 200,
+        icon: Icons.lightbulb_rounded,
+        kind: StoreItemKind.reward,
+      ),
+      StoreItem(
+        id: 'avatar_frame',
+        name: 'Marco dorado',
+        description: 'Un marco dorado para tu avatar en el Bonche.',
+        price: 150,
+        icon: Icons.account_circle_rounded,
+        kind: StoreItemKind.reward,
+        oneTime: true,
+      ),
+      StoreItem(
+        id: 'stickers',
+        name: 'Stickers del bonche',
+        description: 'Un pack de stickers para la charla del grupo.',
+        price: 70,
+        icon: Icons.celebration_rounded,
+        kind: StoreItemKind.reward,
+        oneTime: true,
+      ),
+    ];
+  }
+}
+
+// =============================================================================
+// 7. ESTADO DE LA APP
+// =============================================================================
+
+/// Estado global de la aplicación (en memoria).
+class AppState extends ChangeNotifier {
+  AppState({
+    required this.authService,
+    required this.challengeService,
+    required this.validationService,
+    required this.permissionService,
+    required this.groupService,
+    required this.rankingService,
+    required this.chatService,
+    required this.storeService,
+  });
+
+  final AuthService authService;
+  final ChallengeService challengeService;
+  final EvidenceValidationService validationService;
+  final PermissionService permissionService;
+  final GroupService groupService;
+  final RankingService rankingService;
+  final ChatService chatService;
+  final StoreService storeService;
+
+  UserProfile? _user;
+  List<Challenge> _challenges = const [];
+  bool _challengesLoading = false;
+  String? _challengesError;
+  bool _authBusy = false;
+  String? _authError;
+  bool _streakCountedToday = false;
+  bool _disposed = false;
+  final Set<String> _completedIds = <String>{};
+  final Map<String, Evidence> _evidenceByChallenge = <String, Evidence>{};
+
+  // Bonche, ranking y tienda
+  GroupInfo? _group;
+  List<ChatMessage> _messages = const [];
+  RankingBoard? _weeklyBoard;
+  RankingBoard? _monthlyBoard;
+  List<StoreItem> _storeItems = const [];
+  bool _socialLoading = false;
+  String? _socialError;
+  int _sessionPoints = 0;
+  int _sessionCompleted = 0;
+  int _replyCounter = 0;
+  int _idCounter = 0;
+  final Map<String, int> _inventory = <String, int>{};
+
+  // ---------------------------------------------------------------- lectura
+
+  bool get isSignedIn => _user != null;
+  UserProfile get user => _user ?? UserProfile.empty;
+  LevelInfo get levelInfo => LevelSystem.fromXp(user.xp);
+  List<Challenge> get challenges => _challenges;
+  bool get challengesLoading => _challengesLoading;
+  String? get challengesError => _challengesError;
+  bool get authBusy => _authBusy;
+  String? get authError => _authError;
+
+  GroupInfo? get group => _group;
+  List<ChatMessage> get messages => _messages;
+  List<StoreItem> get storeItems => _storeItems;
+  bool get socialLoading => _socialLoading;
+  String? get socialError => _socialError;
+  Map<String, int> get inventory => Map<String, int>.unmodifiable(_inventory);
+
+  int ownedCount(String itemId) => _inventory[itemId] ?? 0;
+
+  Challenge? challengeById(String id) {
+    for (final challenge in _challenges) {
+      if (challenge.id == id) return challenge;
+    }
+    return null;
+  }
+
+  Evidence? evidenceFor(String challengeId) => _evidenceByChallenge[challengeId];
+
+  /// Estado personal de un reto en el instante [at] (por defecto, ahora).
+  ChallengeStatus statusOf(Challenge challenge, [DateTime? at]) {
+    final now = at ?? DateTime.now();
+    if (_completedIds.contains(challenge.id)) return ChallengeStatus.completed;
+    if (now.isBefore(challenge.startsAt)) return ChallengeStatus.upcoming;
+    if (!now.isBefore(challenge.endsAt)) return ChallengeStatus.expired;
+    return ChallengeStatus.available;
+  }
+
+  /// Integrantes del grupo que ya completaron el reto (incluye al usuario).
+  int groupCompleted(Challenge challenge) {
+    return challenge.completedBy + (_completedIds.contains(challenge.id) ? 1 : 0);
+  }
+
+  /// Reto protagonista de Inicio: activo, luego completado, luego próximo.
+  Challenge? focusChallenge(DateTime now) {
+    if (_challenges.isEmpty) return null;
+    const order = [
+      ChallengeStatus.available,
+      ChallengeStatus.completed,
+      ChallengeStatus.upcoming,
+    ];
+    for (final status in order) {
+      for (final challenge in _challenges) {
+        if (statusOf(challenge, now) == status) return challenge;
+      }
+    }
+    return _challenges.first;
+  }
+
+  List<Challenge> otherChallenges(DateTime now) {
+    final focus = focusChallenge(now);
+    return _challenges.where((c) => c.id != focus?.id).toList();
+  }
+
+  // --------------------------------------------------- bonche y ranking (vivo)
+
+  /// Integrantes del grupo; el usuario aparece con su nombre, nivel y racha
+  /// reales de la sesión.
+  List<GroupMember> get members {
+    final current = _group;
+    if (current == null) return const [];
+    final me = _user;
+    final info = levelInfo;
+    return [
+      for (final member in current.members)
+        if (me != null && member.id == me.id)
+          member.copyWith(
+            name: me.displayName,
+            level: info.level,
+            streak: me.streak,
+          )
+        else
+          member,
+    ];
+  }
+
+  GroupMember? memberById(String id) {
+    for (final member in members) {
+      if (member.id == id) return member;
+    }
+    return null;
+  }
+
+  RankingBoard? boardFor(RankingPeriod period) {
+    return period == RankingPeriod.weekly ? _weeklyBoard : _monthlyBoard;
+  }
+
+  /// Clasificación ordenada, sumando lo que el usuario ganó en esta sesión.
+  List<RankingEntry> liveEntries(RankingPeriod period) {
+    final board = boardFor(period);
+    if (board == null) return const [];
+    final me = _user;
+    final entries = <RankingEntry>[
+      for (final entry in board.entries)
+        if (me != null && entry.memberId == me.id)
+          entry.copyWith(
+            points: entry.points + _sessionPoints,
+            completed: entry.completed + _sessionCompleted,
+          )
+        else
+          entry,
+    ];
+    entries.sort((a, b) {
+      final byPoints = b.points.compareTo(a.points);
+      if (byPoints != 0) return byPoints;
+      return a.memberId.compareTo(b.memberId);
+    });
+    return entries;
+  }
+
+  /// Serie de evolución del usuario incluyendo los puntos de esta sesión.
+  List<double> liveUserSeries(RankingPeriod period) {
+    final board = boardFor(period);
+    if (board == null) return const [];
+    final series = List<double>.from(board.userSeries);
+    if (series.isNotEmpty) series[series.length - 1] += _sessionPoints;
+    return series;
+  }
+
+  // ------------------------------------------------------------ autenticación
+
+  Future<bool> signInWithGoogle() => _signIn(authService.signInWithGoogle);
+
+  Future<bool> signInWithEmail({
+    required String email,
+    required String password,
+  }) {
+    return _signIn(
+      () => authService.signInWithEmail(email: email, password: password),
+    );
+  }
+
+  Future<bool> _signIn(Future<UserProfile> Function() action) async {
+    if (_authBusy) return false;
+    _authBusy = true;
+    _authError = null;
+    _notify();
+    try {
+      _user = await action();
+      _resetSession();
+      await Future.wait<void>([loadChallenges(), loadSocial()]);
+      return true;
+    } catch (_) {
+      _user = null;
+      _authError = 'No pudimos iniciar sesión. Inténtalo de nuevo.';
+      return false;
+    } finally {
+      _authBusy = false;
+      _notify();
+    }
+  }
+
+  Future<void> signOut() async {
+    try {
+      await authService.signOut();
+    } finally {
+      _user = null;
+      _challenges = const [];
+      _challengesError = null;
+      _resetSession();
+      _notify();
+    }
+  }
+
+  void _resetSession() {
+    _completedIds.clear();
+    _evidenceByChallenge.clear();
+    _streakCountedToday = false;
+    _inventory.clear();
+    _sessionPoints = 0;
+    _sessionCompleted = 0;
+    _replyCounter = 0;
+    _messages = const [];
+    _group = null;
+    _weeklyBoard = null;
+    _monthlyBoard = null;
+    _storeItems = const [];
+    _socialError = null;
+  }
+
+  // -------------------------------------------------------------------- retos
+
+  Future<void> loadChallenges() async {
+    _challengesLoading = true;
+    _challengesError = null;
+    _notify();
+    try {
+      _challenges = await challengeService.fetchTodayChallenges();
+    } catch (_) {
+      _challengesError = 'No pudimos cargar los retos de hoy.';
+    } finally {
+      _challengesLoading = false;
+      _notify();
+    }
+  }
+
+  /// Valida la evidencia y, si se aprueba, aplica XP, monedas y racha.
+  Future<RewardResult> completeChallenge(
+    Challenge challenge,
+    Evidence evidence,
+  ) async {
+    if (_completedIds.contains(challenge.id)) {
+      return RewardResult.rejected(
+        challengeTitle: challenge.title,
+        message: 'Este reto ya está completado.',
+      );
+    }
+
+    final validation = await validationService.validate(
+      challenge: challenge,
+      evidence: evidence,
+    );
+    if (!validation.approved) {
+      return RewardResult.rejected(
+        challengeTitle: challenge.title,
+        message: validation.message,
+      );
+    }
+    // Evita doble recompensa si se confirmó dos veces mientras se validaba.
+    if (_completedIds.contains(challenge.id)) {
+      return RewardResult.rejected(
+        challengeTitle: challenge.title,
+        message: 'Este reto ya está completado.',
+      );
+    }
+
+    final before = levelInfo;
+    _completedIds.add(challenge.id);
+    _evidenceByChallenge[challenge.id] = evidence;
+
+    // Ventaja "Doble XP" comprada en la tienda.
+    var xp = challenge.xpReward;
+    var doubleXpUsed = false;
+    final charges = ownedCount(StoreItem.doubleXpId);
+    if (charges > 0) {
+      xp *= 2;
+      doubleXpUsed = true;
+      if (charges - 1 <= 0) {
+        _inventory.remove(StoreItem.doubleXpId);
+      } else {
+        _inventory[StoreItem.doubleXpId] = charges - 1;
+      }
+    }
+
+    var streak = user.streak;
+    var bestStreak = user.bestStreak;
+    if (!_streakCountedToday) {
+      streak += 1;
+      _streakCountedToday = true;
+      if (streak > bestStreak) bestStreak = streak;
+    }
+
+    _sessionPoints += challenge.points;
+    _sessionCompleted += 1;
+    _messages = [
+      ..._messages,
+      ChatMessage.system(
+        id: _newId(),
+        text: '${user.firstName} completó "${challenge.title}"',
+        sentAt: DateTime.now(),
+      ),
+    ];
+
+    _user = user.copyWith(
+      xp: user.xp + xp,
+      coins: user.coins + challenge.coinReward,
+      streak: streak,
+      bestStreak: bestStreak,
+      completedChallenges: user.completedChallenges + 1,
+    );
+    final after = levelInfo;
+    _notify();
+
+    return RewardResult(
+      approved: true,
+      message: validation.message,
+      challengeTitle: challenge.title,
+      xpGained: xp,
+      coinsGained: challenge.coinReward,
+      streak: streak,
+      leveledUp: after.level > before.level,
+      level: after.level,
+      levelTitle: after.title,
+      doubleXpUsed: doubleXpUsed,
+    );
+  }
+
+  // ----------------------------------------------- bonche, ranking y tienda
+
+  Future<void> loadSocial() async {
+    _socialLoading = true;
+    _socialError = null;
+    _notify();
+    try {
+      final now = DateTime.now();
+      final (group, messages, weekly, monthly, items) = await (
+        groupService.fetchGroup(),
+        chatService.fetchMessages(),
+        rankingService.fetchBoard(RankingPeriod.weekly, now),
+        rankingService.fetchBoard(RankingPeriod.monthly, now),
+        storeService.fetchItems(),
+      ).wait;
+      _group = group;
+      _messages = messages;
+      _weeklyBoard = weekly;
+      _monthlyBoard = monthly;
+      _storeItems = items;
+    } catch (_) {
+      _socialError =
+          'No pudimos cargar tu bonche. Revisa tu conexión e inténtalo de nuevo.';
+    } finally {
+      _socialLoading = false;
+      _notify();
+    }
+  }
+
+  /// Compra un artículo de la tienda descontando monedas.
+  PurchaseResult purchase(StoreItem item) {
+    final owned = ownedCount(item.id);
+    if (item.oneTime && owned > 0) return PurchaseResult.alreadyOwned;
+    if (user.coins < item.price) return PurchaseResult.insufficientCoins;
+    _user = user.copyWith(coins: user.coins - item.price);
+    _inventory[item.id] = owned + 1;
+    _notify();
+    return PurchaseResult.success;
+  }
+
+  /// Envía un mensaje al chat del Bonche (simulado, sin servidor).
+  void sendMessage(String text) {
+    final trimmed = text.trim();
+    final me = _user;
+    if (trimmed.isEmpty || me == null) return;
+    _messages = [
+      ..._messages,
+      ChatMessage(
+        id: _newId(),
+        authorId: me.id,
+        text: trimmed,
+        sentAt: DateTime.now(),
+      ),
+    ];
+    _notify();
+    unawaited(_scheduleReply(trimmed, me.id));
+  }
+
+  Future<void> _scheduleReply(String text, String myId) async {
+    await Future<void>.delayed(const Duration(milliseconds: 1400));
+    if (_disposed || _user?.id != myId) return;
+    try {
+      final reply = await chatService.replyTo(
+        text: text,
+        members: members,
+        excludeId: myId,
+        seed: _replyCounter++,
+      );
+      if (_disposed || _user?.id != myId) return;
+      _messages = [..._messages, reply];
+      _notify();
+    } catch (_) {
+      // Si la respuesta simulada falla, no pasa nada.
+    }
+  }
+
+  String _newId() => 'm-${_idCounter++}-${DateTime.now().microsecondsSinceEpoch}';
+
+  // ----------------------------------------------------------------- interno
+
+  void _notify() {
+    if (!_disposed) notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+}
+
+/// Expone [AppState] a todo el árbol de widgets (sin paquetes externos).
+class AppScope extends InheritedNotifier<AppState> {
+  const AppScope({
+    super.key,
+    required AppState state,
+    required super.child,
+  }) : super(notifier: state);
+
+  /// Obtiene el estado y reconstruye el widget cuando el estado cambia.
+  static AppState of(BuildContext context) {
+    final scope = context.dependOnInheritedWidgetOfExactType<AppScope>();
+    assert(scope != null, 'No se encontró AppScope en el árbol de widgets.');
+    return scope!.notifier!;
+  }
+
+  /// Obtiene el estado sin suscribirse a sus cambios (útil en callbacks).
+  static AppState read(BuildContext context) {
+    final scope = context.getInheritedWidgetOfExactType<AppScope>();
+    assert(scope != null, 'No se encontró AppScope en el árbol de widgets.');
+    return scope!.notifier!;
+  }
+}
+
+// =============================================================================
+// 8. NAVEGACIÓN
+// =============================================================================
+
+class AppRoutes {
+  AppRoutes._();
+
+  static const String welcome = '/';
+  static const String main = '/main';
+  static const String challengeDetail = '/challenge';
+  static const String evidenceCapture = '/evidence';
+  static const String reward = '/reward';
+  static const String profile = '/profile';
+}
+
+class AppRouter {
+  AppRouter._();
+
+  static Route<dynamic> onGenerateRoute(RouteSettings settings) {
+    final name = settings.name;
+    final args = settings.arguments;
+
+    if (name == AppRoutes.welcome) {
+      return _page(settings, const WelcomeScreen());
+    }
+    if (name == AppRoutes.main) {
+      return _page(settings, const MainShell());
+    }
+    if (name == AppRoutes.profile) {
+      return _page(settings, const ProfileScreen());
+    }
+    if (name == AppRoutes.challengeDetail && args is String) {
+      return _page(settings, ChallengeDetailScreen(challengeId: args));
+    }
+    if (name == AppRoutes.evidenceCapture && args is String) {
+      return _page(settings, EvidenceCaptureScreen(challengeId: args));
+    }
+    if (name == AppRoutes.reward && args is RewardResult) {
+      return _page(settings, RewardScreen(result: args));
+    }
+    return _page(settings, const _RouteErrorScreen());
+  }
+
+  static Route<dynamic> _page(RouteSettings settings, Widget child) {
+    return MaterialPageRoute<void>(
+      settings: settings,
+      builder: (_) => child,
+    );
+  }
+}
+
+class _RouteErrorScreen extends StatelessWidget {
+  const _RouteErrorScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: ccAppBar('Ups'),
+      body: ErrorStateView(
+        message: 'No encontramos esta pantalla.',
+        retryLabel: 'Volver',
+        onRetry: () => Navigator.of(context).maybePop(),
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// 9. WIDGETS REUTILIZABLES
+// =============================================================================
+
+/// Logo de ChallengeUs dibujado en código (sin assets).
+class AppLogo extends StatelessWidget {
+  const AppLogo({
+    super.key,
+    this.size = 30,
+    this.showWordmark = true,
+    this.vertical = false,
+  });
+
+  final double size;
+  final bool showWordmark;
+  final bool vertical;
+
+  @override
+  Widget build(BuildContext context) {
+    final mark = Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: AppColors.yellow,
+        borderRadius: BorderRadius.circular(size * 0.3),
+      ),
+      child: Icon(Icons.bolt_rounded, color: AppColors.onYellow, size: size * 0.62),
+    );
+
+    if (!showWordmark) return mark;
+
+    final wordmark = Text.rich(
+      TextSpan(
+        style: TextStyle(
+          fontSize: vertical ? size * 0.42 : size * 0.72,
+          fontWeight: FontWeight.w800,
+          color: AppColors.textPrimary,
+        ),
+        children: const [
+          TextSpan(text: 'Challenge'),
+          TextSpan(text: 'Us', style: TextStyle(color: AppColors.yellow)),
+        ],
+      ),
+    );
+
+    if (vertical) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [mark, SizedBox(height: size * 0.22), wordmark],
+      );
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [mark, SizedBox(width: size * 0.3), wordmark],
+    );
+  }
+}
+
+/// AppBar estándar de las pantallas secundarias.
+PreferredSizeWidget ccAppBar(String title, {List<Widget>? actions}) {
+  return AppBar(
+    title: Text(title),
+    titleTextStyle: AppText.heading,
+    backgroundColor: AppColors.background,
+    surfaceTintColor: Colors.transparent,
+    scrolledUnderElevation: 0,
+    centerTitle: false,
+    actions: actions,
+  );
+}
+
+/// Decoración estándar para campos de texto.
+InputDecoration ccInputDecoration({
+  required String label,
+  required IconData icon,
+  Widget? suffix,
+}) {
+  OutlineInputBorder border(Color color) => OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: color),
+      );
+
+  return InputDecoration(
+    labelText: label,
+    prefixIcon: Icon(icon, size: 20),
+    suffixIcon: suffix,
+    filled: true,
+    fillColor: AppColors.surfaceAlt,
+    border: border(AppColors.border),
+    enabledBorder: border(AppColors.border),
+    focusedBorder: border(AppColors.yellow),
+    errorBorder: border(AppColors.error),
+    focusedErrorBorder: border(AppColors.error),
+  );
+}
+
+/// Tarjeta base con borde suave.
+class CCCard extends StatelessWidget {
+  const CCCard({
+    super.key,
+    required this.child,
+    this.padding = const EdgeInsets.all(16),
+    this.onTap,
+    this.highlight = false,
+  });
+
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+  final VoidCallback? onTap;
+  final bool highlight;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surface,
+      clipBehavior: Clip.antiAlias,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(
+          color: highlight
+              ? AppColors.yellow.withValues(alpha: 0.6)
+              : AppColors.border,
+        ),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(padding: padding, child: child),
+      ),
+    );
+  }
+}
+
+/// Etiqueta pequeña con color (categoría, dificultad, estado...).
+class InfoPill extends StatelessWidget {
+  const InfoPill({
+    super.key,
+    required this.label,
+    this.icon,
+    this.color = AppColors.textSecondary,
+  });
+
+  final String label;
+  final IconData? icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 14, color: color),
+            const SizedBox(width: 4),
+          ],
+          Text(label, style: AppText.label.copyWith(color: color)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Chip con icono y valor (monedas, racha, nivel).
+class ValueChip extends StatelessWidget {
+  const ValueChip({
+    super.key,
+    required this.icon,
+    required this.text,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String text;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            style: AppText.body.copyWith(fontSize: 14, fontWeight: FontWeight.w700),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Caja de estadística (icono, valor y etiqueta).
+class StatBox extends StatelessWidget {
+  const StatBox({
+    super.key,
+    required this.icon,
+    required this.value,
+    required this.label,
+    this.color = AppColors.yellow,
+  });
+
+  final IconData icon;
+  final String value;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return CCCard(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 8),
+          Text(value, style: AppText.title),
+          const SizedBox(height: 2),
+          Text(label, style: AppText.label, textAlign: TextAlign.center),
+        ],
+      ),
+    );
+  }
+}
+
+class UserAvatar extends StatelessWidget {
+  const UserAvatar({super.key, required this.initials, this.radius = 18});
+
+  final String initials;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    return CircleAvatar(
+      radius: radius,
+      backgroundColor: AppColors.yellow,
+      child: Text(
+        initials,
+        style: TextStyle(
+          color: AppColors.onYellow,
+          fontWeight: FontWeight.w800,
+          fontSize: radius * 0.8,
+        ),
+      ),
+    );
+  }
+}
+
+class CCProgressBar extends StatelessWidget {
+  const CCProgressBar({
+    super.key,
+    required this.value,
+    this.color = AppColors.yellow,
+    this.height = 8,
+  });
+
+  final double value;
+  final Color color;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final safeValue = value < 0 ? 0.0 : (value > 1 ? 1.0 : value);
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(999),
+      child: LinearProgressIndicator(
+        value: safeValue,
+        minHeight: height,
+        backgroundColor: AppColors.surfaceAlt,
+        valueColor: AlwaysStoppedAnimation<Color>(color),
+      ),
+    );
+  }
+}
+
+/// Botón principal (amarillo), ancho completo.
+class PrimaryButton extends StatelessWidget {
+  const PrimaryButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.icon,
+    this.loading = false,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final IconData? icon;
+  final bool loading;
+
+  @override
+  Widget build(BuildContext context) {
+    return FilledButton(
+      onPressed: loading ? null : onPressed,
+      child: loading
+          ? const SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: AppColors.yellow,
+              ),
+            )
+          : Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (icon != null) ...[
+                  Icon(icon, size: 20),
+                  const SizedBox(width: 8),
+                ],
+                Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
+              ],
+            ),
+    );
+  }
+}
+
+/// Botón secundario (contorno), ancho completo.
+class SecondaryButton extends StatelessWidget {
+  const SecondaryButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.icon,
+  });
+
+  final String label;
+  final VoidCallback? onPressed;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton(
+      onPressed: onPressed,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 20),
+            const SizedBox(width: 8),
+          ],
+          Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
+        ],
+      ),
+    );
+  }
+}
+
+/// Reconstruye su contenido cada cierto tiempo para refrescar cuentas
+/// regresivas y estados que dependen de la hora.
+class TickBuilder extends StatefulWidget {
+  const TickBuilder({
+    super.key,
+    required this.builder,
+    this.interval = const Duration(seconds: 30),
+  });
+
+  final Widget Function(BuildContext context, DateTime now) builder;
+  final Duration interval;
+
+  @override
+  State<TickBuilder> createState() => _TickBuilderState();
+}
+
+class _TickBuilderState extends State<TickBuilder> {
+  Timer? _timer;
+  DateTime _now = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(widget.interval, (_) {
+      if (!mounted) return;
+      setState(() => _now = DateTime.now());
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.builder(context, _now);
+}
+
+/// Título de sección con espacio inferior.
+class SectionTitle extends StatelessWidget {
+  const SectionTitle(this.text, {super.key});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Text(text, style: AppText.heading),
+    );
+  }
+}
+
+/// Selector de pestañas en forma de píldora (Semanal/Mensual, etc.).
+class SegmentedTabs extends StatelessWidget {
+  const SegmentedTabs({
+    super.key,
+    required this.labels,
+    required this.selected,
+    required this.onChanged,
+  });
+
+  final List<String> labels;
+  final int selected;
+  final ValueChanged<int> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Row(
+        children: [
+          for (var i = 0; i < labels.length; i++)
+            Expanded(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => onChanged(i),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 180),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: i == selected ? AppColors.yellow : Colors.transparent,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    labels[i],
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: i == selected
+                          ? AppColors.onYellow
+                          : AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class EmptyStateView extends StatelessWidget {
+  const EmptyStateView({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: const BoxDecoration(
+                color: AppColors.yellowSoft,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, size: 34, color: AppColors.yellow),
+            ),
+            const SizedBox(height: 20),
+            Text(title, textAlign: TextAlign.center, style: AppText.heading),
+            const SizedBox(height: 8),
+            Text(message, textAlign: TextAlign.center, style: AppText.bodyMuted),
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(height: 24),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 260),
+                child: PrimaryButton(label: actionLabel!, onPressed: onAction),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class ErrorStateView extends StatelessWidget {
+  const ErrorStateView({
+    super.key,
+    required this.message,
+    this.onRetry,
+    this.retryLabel = 'Reintentar',
+  });
+
+  final String message;
+  final VoidCallback? onRetry;
+  final String retryLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.14),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.error_outline_rounded,
+                size: 34,
+                color: AppColors.error,
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text('Algo no salió bien', style: AppText.heading),
+            const SizedBox(height: 8),
+            Text(message, textAlign: TextAlign.center, style: AppText.bodyMuted),
+            if (onRetry != null) ...[
+              const SizedBox(height: 24),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 260),
+                child: SecondaryButton(
+                  label: retryLabel,
+                  icon: Icons.refresh_rounded,
+                  onPressed: onRetry,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class LoadingView extends StatelessWidget {
+  const LoadingView({super.key, this.label});
+
+  final String? label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CircularProgressIndicator(),
+          if (label != null) ...[
+            const SizedBox(height: 16),
+            Text(label!, style: AppText.bodyMuted),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// --- Piezas visuales de los retos --------------------------------------------
+
+extension ChallengeCategoryUi on ChallengeCategory {
+  IconData get icon {
+    switch (this) {
+      case ChallengeCategory.observacion:
+        return Icons.visibility_rounded;
+      case ChallengeCategory.creatividad:
+        return Icons.palette_rounded;
+      case ChallengeCategory.movimiento:
+        return Icons.directions_run_rounded;
+      case ChallengeCategory.ingenio:
+        return Icons.lightbulb_rounded;
+    }
+  }
+}
+
+extension ChallengeDifficultyUi on ChallengeDifficulty {
+  Color get color {
+    switch (this) {
+      case ChallengeDifficulty.facil:
+        return AppColors.success;
+      case ChallengeDifficulty.medio:
+        return AppColors.yellow;
+      case ChallengeDifficulty.dificil:
+        return AppColors.orange;
+    }
+  }
+}
+
+extension ChallengeStatusUi on ChallengeStatus {
+  String get label {
+    switch (this) {
+      case ChallengeStatus.available:
+        return 'Pendiente';
+      case ChallengeStatus.upcoming:
+        return 'Próximo';
+      case ChallengeStatus.completed:
+        return 'Completado';
+      case ChallengeStatus.expired:
+        return 'Expirado';
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case ChallengeStatus.available:
+        return AppColors.yellow;
+      case ChallengeStatus.upcoming:
+        return AppColors.textSecondary;
+      case ChallengeStatus.completed:
+        return AppColors.success;
+      case ChallengeStatus.expired:
+        return AppColors.error;
+    }
+  }
+
+  IconData get icon {
+    switch (this) {
+      case ChallengeStatus.available:
+        return Icons.hourglass_top_rounded;
+      case ChallengeStatus.upcoming:
+        return Icons.schedule_rounded;
+      case ChallengeStatus.completed:
+        return Icons.check_circle_rounded;
+      case ChallengeStatus.expired:
+        return Icons.timer_off_rounded;
+    }
+  }
+}
+
+String challengeTimeLabel(
+  Challenge challenge,
+  ChallengeStatus status,
+  DateTime now,
+) {
+  switch (status) {
+    case ChallengeStatus.available:
+      return 'Quedan ${formatRemaining(challenge.timeLeft(now))}';
+    case ChallengeStatus.upcoming:
+      return 'Empieza en ${formatRemaining(challenge.timeUntilStart(now))}';
+    case ChallengeStatus.completed:
+      return 'Completado';
+    case ChallengeStatus.expired:
+      return 'Tiempo agotado';
+  }
+}
+
+/// Tarjeta protagonista del reto en la pantalla de Inicio.
+class ChallengeHeroCard extends StatelessWidget {
+  const ChallengeHeroCard({
+    super.key,
+    required this.challenge,
+    required this.status,
+    required this.now,
+    required this.groupCompleted,
+    required this.onTap,
+  });
+
+  final Challenge challenge;
+  final ChallengeStatus status;
+  final DateTime now;
+  final int groupCompleted;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = status == ChallengeStatus.available;
+    final progress =
+        challenge.totalMembers == 0 ? 0.0 : groupCompleted / challenge.totalMembers;
+
+    return CCCard(
+      highlight: active,
+      padding: const EdgeInsets.all(20),
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: AppColors.yellowSoft,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(challenge.category.icon, color: AppColors.yellow, size: 28),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: [
+                    InfoPill(label: challenge.category.label, color: AppColors.yellow),
+                    InfoPill(
+                      label: challenge.difficulty.label,
+                      color: challenge.difficulty.color,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Text(challenge.title, style: AppText.display),
+          const SizedBox(height: 8),
+          Text(
+            challenge.objective,
+            style: AppText.bodyMuted,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 18),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              InfoPill(
+                label: challengeTimeLabel(challenge, status, now),
+                icon: Icons.timer_outlined,
+                color: active ? AppColors.yellow : AppColors.textSecondary,
+              ),
+              InfoPill(label: status.label, icon: status.icon, color: status.color),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Progreso del bonche', style: AppText.label),
+              Text(
+                '$groupCompleted/${challenge.totalMembers}',
+                style: AppText.label.copyWith(color: AppColors.textPrimary),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          CCProgressBar(value: progress),
+          const SizedBox(height: 20),
+          PrimaryButton(
+            label: 'Ver reto',
+            icon: Icons.arrow_forward_rounded,
+            onPressed: onTap,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// 10. PANTALLAS
+// =============================================================================
+
+// -----------------------------------------------------------------------------
+// Welcome / Login
+// -----------------------------------------------------------------------------
+
+class WelcomeScreen extends StatelessWidget {
+  const WelcomeScreen({super.key});
+
+  Future<void> _loginWithGoogle(BuildContext context) async {
+    final app = AppScope.read(context);
+    final ok = await app.signInWithGoogle();
+    if (!context.mounted) return;
+    if (ok) {
+      Navigator.of(context).pushReplacementNamed(AppRoutes.main);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(app.authError ?? 'No pudimos iniciar sesión.')),
+      );
+    }
+  }
+
+  Future<void> _openEmailSheet(BuildContext context) async {
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => const _EmailSheet(),
+    );
+    if (ok == true && context.mounted) {
+      Navigator.of(context).pushReplacementNamed(AppRoutes.main);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final busy = AppScope.of(context).authBusy;
+
+    return Scaffold(
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const AppLogo(size: 88, vertical: true),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Pequeños retos. Grandes bonches.',
+                    textAlign: TextAlign.center,
+                    style: AppText.heading,
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Retos diarios entre amigos. Compite sano, ríe y gana con tu parche.',
+                    textAlign: TextAlign.center,
+                    style: AppText.bodyMuted,
+                  ),
+                  const SizedBox(height: 40),
+                  PrimaryButton(
+                    label: 'Continuar con Google',
+                    icon: Icons.login_rounded,
+                    loading: busy,
+                    onPressed: () => _loginWithGoogle(context),
+                  ),
+                  const SizedBox(height: 12),
+                  SecondaryButton(
+                    label: 'Continuar con correo',
+                    icon: Icons.mail_outline_rounded,
+                    onPressed: busy ? null : () => _openEmailSheet(context),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _EmailSheet extends StatefulWidget {
+  const _EmailSheet();
+
+  @override
+  State<_EmailSheet> createState() => _EmailSheetState();
+}
+
+class _EmailSheetState extends State<_EmailSheet> {
+  final _formKey = GlobalKey<FormState>();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _hidePassword = true;
+  bool _busy = false;
+  String? _error;
+
+  static final RegExp _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+    final app = AppScope.read(context);
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    final ok = await app.signInWithEmail(
+      email: _emailController.text,
+      password: _passwordController.text,
+    );
+    if (!mounted) return;
+    if (ok) {
+      Navigator.of(context).pop(true);
+    } else {
+      setState(() {
+        _busy = false;
+        _error = app.authError ?? 'No pudimos iniciar sesión.';
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + bottomInset),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Entra con tu correo', style: AppText.title),
+            const SizedBox(height: 6),
+            const Text('Usa tu correo y una contraseña.', style: AppText.bodyMuted),
+            const SizedBox(height: 20),
+            TextFormField(
+              controller: _emailController,
+              keyboardType: TextInputType.emailAddress,
+              textInputAction: TextInputAction.next,
+              decoration: ccInputDecoration(
+                label: 'Correo electrónico',
+                icon: Icons.mail_outline_rounded,
+              ),
+              validator: (value) {
+                final text = (value ?? '').trim();
+                if (text.isEmpty) return 'Escribe tu correo';
+                if (!_emailPattern.hasMatch(text)) return 'Correo no válido';
+                return null;
+              },
+            ),
+            const SizedBox(height: 14),
+            TextFormField(
+              controller: _passwordController,
+              obscureText: _hidePassword,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) => _submit(),
+              decoration: ccInputDecoration(
+                label: 'Contraseña',
+                icon: Icons.lock_outline_rounded,
+                suffix: IconButton(
+                  onPressed: () => setState(() => _hidePassword = !_hidePassword),
+                  icon: Icon(
+                    _hidePassword
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    size: 20,
+                  ),
+                ),
+              ),
+              validator: (value) {
+                if ((value ?? '').length < 6) return 'Mínimo 6 caracteres';
+                return null;
+              },
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              Text(_error!, style: AppText.body.copyWith(color: AppColors.error)),
+            ],
+            const SizedBox(height: 22),
+            PrimaryButton(
+              label: 'Entrar',
+              loading: _busy,
+              onPressed: _submit,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// MainShell: barra superior + 4 secciones + barra inferior
+// -----------------------------------------------------------------------------
+
+class MainShell extends StatefulWidget {
+  const MainShell({super.key});
+
+  @override
+  State<MainShell> createState() => _MainShellState();
+}
+
+class _MainShellState extends State<MainShell> {
+  int _index = 0;
+
+  void _openProfile() {
+    Navigator.of(context).pushNamed(AppRoutes.profile);
+  }
+
+  void _openNotifications() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => const SizedBox(
+        height: 300,
+        child: EmptyStateView(
+          icon: Icons.notifications_none_rounded,
+          title: 'Sin notificaciones',
+          message:
+              'Aquí verás cuando salga un reto nuevo o tu bonche te escriba.',
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = AppScope.of(context).user;
+
+    return PopScope(
+      canPop: _index == 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) setState(() => _index = 0);
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          backgroundColor: AppColors.background,
+          surfaceTintColor: Colors.transparent,
+          scrolledUnderElevation: 0,
+          titleSpacing: 20,
+          title: const AppLogo(size: 28),
+          actions: [
+            IconButton(
+              tooltip: 'Notificaciones',
+              onPressed: _openNotifications,
+              icon: const Icon(Icons.notifications_none_rounded),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(left: 4, right: 16),
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: _openProfile,
+                child: UserAvatar(initials: user.initials),
+              ),
+            ),
+          ],
+        ),
+        body: IndexedStack(
+          index: _index,
+          children: const [
+            HomeScreen(),
+            BoncheScreen(),
+            RankingScreen(),
+            StoreScreen(),
+          ],
+        ),
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: _index,
+          onDestinationSelected: (i) => setState(() => _index = i),
+          backgroundColor: AppColors.surface,
+          surfaceTintColor: Colors.transparent,
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home_rounded),
+              label: 'Inicio',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.groups_outlined),
+              selectedIcon: Icon(Icons.groups_rounded),
+              label: 'Bonche',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.leaderboard_outlined),
+              selectedIcon: Icon(Icons.leaderboard_rounded),
+              label: 'Ranking',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.storefront_outlined),
+              selectedIcon: Icon(Icons.storefront_rounded),
+              label: 'Tienda',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Inicio
+// -----------------------------------------------------------------------------
+
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
+
+  void _openChallenge(BuildContext context, Challenge challenge) {
+    Navigator.of(context).pushNamed(
+      AppRoutes.challengeDetail,
+      arguments: challenge.id,
+    );
+  }
+
+  List<Widget> _buildContent(BuildContext context, AppState state, DateTime now) {
+    if (state.challengesLoading) {
+      return const [
+        SizedBox(height: 280, child: LoadingView(label: 'Cargando tus retos...')),
+      ];
+    }
+    final error = state.challengesError;
+    if (error != null) {
+      return [ErrorStateView(message: error, onRetry: () => state.loadChallenges())];
+    }
+    final focus = state.focusChallenge(now);
+    if (focus == null) {
+      return const [
+        EmptyStateView(
+          icon: Icons.emoji_events_rounded,
+          title: 'Hoy no hay retos',
+          message: 'Cuando tu bonche tenga un reto, aparecerá aquí.',
+        ),
+      ];
+    }
+
+    final others = state.otherChallenges(now);
+    return [
+      ChallengeHeroCard(
+        challenge: focus,
+        status: state.statusOf(focus, now),
+        now: now,
+        groupCompleted: state.groupCompleted(focus),
+        onTap: () => _openChallenge(context, focus),
+      ),
+      if (others.isNotEmpty) ...[
+        const SizedBox(height: 28),
+        const Text('Más retos de hoy', style: AppText.heading),
+        const SizedBox(height: 12),
+        for (final challenge in others)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _ChallengeTile(
+              challenge: challenge,
+              status: state.statusOf(challenge, now),
+              now: now,
+              onTap: () => _openChallenge(context, challenge),
+            ),
+          ),
+      ],
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TickBuilder(
+      builder: (context, now) {
+        final state = AppScope.of(context);
+        final user = state.user;
+        final level = state.levelInfo;
+        final streakText =
+            'Racha ${user.streak} ${user.streak == 1 ? 'día' : 'días'}';
+
+        return ListView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+          children: [
+            Text('Hola, ${user.firstName}', style: AppText.title),
+            const SizedBox(height: 4),
+            const Text(
+              'Hoy hay bonche. ¿Vas pa esa?',
+              style: AppText.bodyMuted,
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                ValueChip(
+                  icon: Icons.monetization_on_rounded,
+                  text: '${user.coins} monedas',
+                  color: AppColors.yellow,
+                ),
+                ValueChip(
+                  icon: Icons.local_fire_department_rounded,
+                  text: streakText,
+                  color: AppColors.orange,
+                ),
+                ValueChip(
+                  icon: Icons.military_tech_rounded,
+                  text: 'Nivel ${level.level}',
+                  color: AppColors.textSecondary,
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            ..._buildContent(context, state, now),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _ChallengeTile extends StatelessWidget {
+  const _ChallengeTile({
+    required this.challenge,
+    required this.status,
+    required this.now,
+    required this.onTap,
+  });
+
+  final Challenge challenge;
+  final ChallengeStatus status;
+  final DateTime now;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return CCCard(
+      padding: const EdgeInsets.all(14),
+      onTap: onTap,
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.yellowSoft,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(challenge.category.icon, color: AppColors.yellow),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  challenge.title,
+                  style: AppText.heading,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  challengeTimeLabel(challenge, status, now),
+                  style: AppText.bodyMuted,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          InfoPill(label: status.label, icon: status.icon, color: status.color),
+        ],
+      ),
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Detalle del reto
+// -----------------------------------------------------------------------------
+
+class ChallengeDetailScreen extends StatelessWidget {
+  const ChallengeDetailScreen({super.key, required this.challengeId});
+
+  final String challengeId;
+
+  @override
+  Widget build(BuildContext context) {
+    return TickBuilder(
+      builder: (context, now) {
+        final state = AppScope.of(context);
+        final challenge = state.challengeById(challengeId);
+
+        if (challenge == null) {
+          return Scaffold(
+            appBar: ccAppBar('Reto'),
+            body: ErrorStateView(
+              message: 'No encontramos este reto.',
+              retryLabel: 'Volver',
+              onRetry: () => Navigator.of(context).maybePop(),
+            ),
+          );
+        }
+
+        final status = state.statusOf(challenge, now);
+        final canCapture = status == ChallengeStatus.available;
+        final buttonLabel = switch (status) {
+          ChallengeStatus.available => 'Capturar evidencia',
+          ChallengeStatus.upcoming => 'Aún no empieza',
+          ChallengeStatus.completed => 'Reto completado',
+          ChallengeStatus.expired => 'Tiempo agotado',
+        };
+
+        return Scaffold(
+          appBar: ccAppBar('Detalle del reto'),
+          body: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+            children: [
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  InfoPill(
+                    label: challenge.category.label,
+                    icon: challenge.category.icon,
+                    color: AppColors.yellow,
+                  ),
+                  InfoPill(
+                    label: challenge.difficulty.label,
+                    color: challenge.difficulty.color,
+                  ),
+                  InfoPill(label: status.label, icon: status.icon, color: status.color),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Text(challenge.title, style: AppText.display),
+              const SizedBox(height: 20),
+              CCCard(
+                child: Row(
+                  children: [
+                    const Icon(Icons.timer_outlined, color: AppColors.yellow),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('TIEMPO', style: AppText.label),
+                          const SizedBox(height: 2),
+                          Text(
+                            challengeTimeLabel(challenge, status, now),
+                            style: AppText.heading,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Ventana: ${formatClock(challenge.startsAt)} - ${formatClock(challenge.endsAt)}',
+                            style: AppText.bodyMuted,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _InfoTile(
+                      icon: Icons.stars_rounded,
+                      label: 'PUNTUACIÓN',
+                      value: '${challenge.points} pts',
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _InfoTile(
+                      icon: Icons.card_giftcard_rounded,
+                      label: 'RECOMPENSA',
+                      value: '+${challenge.xpReward} XP\n+${challenge.coinReward} monedas',
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              const Text('Objetivo', style: AppText.heading),
+              const SizedBox(height: 8),
+              Text(challenge.objective, style: AppText.body),
+              const SizedBox(height: 20),
+              const Text('Descripción', style: AppText.heading),
+              const SizedBox(height: 8),
+              Text(challenge.description, style: AppText.bodyMuted),
+              const SizedBox(height: 20),
+              const Text('Reglas', style: AppText.heading),
+              const SizedBox(height: 10),
+              CCCard(
+                child: Column(
+                  children: [
+                    for (var i = 0; i < challenge.rules.length; i++)
+                      Padding(
+                        padding: EdgeInsets.only(
+                          bottom: i == challenge.rules.length - 1 ? 0 : 12,
+                        ),
+                        child: _RuleRow(number: i + 1, text: challenge.rules[i]),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          bottomNavigationBar: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+              child: PrimaryButton(
+                label: buttonLabel,
+                icon: canCapture ? Icons.camera_alt_rounded : null,
+                onPressed: canCapture
+                    ? () => Navigator.of(context).pushNamed(
+                          AppRoutes.evidenceCapture,
+                          arguments: challenge.id,
+                        )
+                    : null,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _InfoTile extends StatelessWidget {
+  const _InfoTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return CCCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: AppColors.yellow, size: 22),
+          const SizedBox(height: 10),
+          Text(label, style: AppText.label),
+          const SizedBox(height: 4),
+          Text(value, style: AppText.heading),
+        ],
+      ),
+    );
+  }
+}
+
+class _RuleRow extends StatelessWidget {
+  const _RuleRow({required this.number, required this.text});
+
+  final int number;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          alignment: Alignment.center,
+          decoration: const BoxDecoration(
+            color: AppColors.yellowSoft,
+            shape: BoxShape.circle,
+          ),
+          child: Text(
+            '$number',
+            style: AppText.label.copyWith(color: AppColors.yellow),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(child: Text(text, style: AppText.body)),
+      ],
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Captura de evidencia (cámara real + permisos reales de Android)
+// -----------------------------------------------------------------------------
+
+/// Fases del flujo de captura. Se decide según el estado REAL del permiso.
+enum _Phase {
+  checking,
+  rationale,
+  requesting,
+  denied,
+  blocked,
+  restricted,
+  startingCamera,
+  ready,
+  capturing,
+  review,
+  submitting,
+  noCamera,
+  error,
+}
+
+class EvidenceCaptureScreen extends StatefulWidget {
+  const EvidenceCaptureScreen({super.key, required this.challengeId});
+
+  final String challengeId;
+
+  @override
+  State<EvidenceCaptureScreen> createState() => _EvidenceCaptureScreenState();
+}
+
+class _EvidenceCaptureScreenState extends State<EvidenceCaptureScreen>
+    with WidgetsBindingObserver {
+  _Phase _phase = _Phase.checking;
+  Challenge? _challenge;
+  PermissionService? _permissions;
+  AppPermission _currentPermission = AppPermission.camera;
+
+  CameraController? _controller;
+  CameraLensDirection _lens = CameraLensDirection.back;
+  bool _canSwitchCamera = false;
+
+  String? _photoPath;
+  String _errorMessage = '';
+  bool _errorRetryable = true;
+
+  int _cameraGeneration = 0;
+  bool _waitingForSettings = false;
+  bool _restartOnResume = false;
+  bool _confirmed = false;
+
+  // ------------------------------------------------------------- ciclo de vida
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _bootstrap());
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _cameraGeneration++;
+    final controller = _controller;
+    _controller = null;
+    if (controller != null) unawaited(controller.dispose());
+    if (!_confirmed) _discardPhoto();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.resumed:
+        if (_waitingForSettings) {
+          _waitingForSettings = false;
+          _recheckAfterSettings();
+        } else if (_restartOnResume) {
+          _restartOnResume = false;
+          _checkPermissions();
+        }
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.hidden:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+        _onBackground();
+    }
+  }
+
+  /// Libera la cámara cuando la app deja de estar en primer plano.
+  void _onBackground() {
+    final holdsCamera = _controller != null &&
+        (_phase == _Phase.ready ||
+            _phase == _Phase.capturing ||
+            _phase == _Phase.startingCamera);
+    if (!holdsCamera) return;
+    _restartOnResume = true;
+    _cameraGeneration++;
+    _setPhase(_Phase.startingCamera);
+    unawaited(_disposeController());
+  }
+
+  // ------------------------------------------------------------------ arranque
+
+  void _bootstrap() {
+    if (!mounted) return;
+    final app = AppScope.read(context);
+    _permissions = app.permissionService;
+
+    final challenge = app.challengeById(widget.challengeId);
+    if (challenge == null) {
+      _fail('No encontramos este reto.', retryable: false);
+      return;
+    }
+    if (app.statusOf(challenge) != ChallengeStatus.available) {
+      _fail('Este reto ya no está disponible para capturar evidencia.',
+          retryable: false);
+      return;
+    }
+    _challenge = challenge;
+    _checkPermissions();
+  }
+
+  void _setPhase(_Phase phase) {
+    if (!mounted) return;
+    setState(() => _phase = phase);
+  }
+
+  void _fail(String message, {bool retryable = true}) {
+    _errorMessage = message;
+    _errorRetryable = retryable;
+    _setPhase(_Phase.error);
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  void _close() {
+    Navigator.of(context).maybePop();
+  }
+
+  // ------------------------------------------------------------------ permisos
+
+  /// Revisa, en orden, los permisos que exige el reto. Si todos están
+  /// concedidos abre la cámara; si no, decide la fase según el estado real.
+  Future<void> _checkPermissions() async {
+    final challenge = _challenge;
+    final permissions = _permissions;
+    if (challenge == null || permissions == null) return;
+
+    _setPhase(_Phase.checking);
+    for (final permission in challenge.requiredPermissions) {
+      final outcome = await permissions.check(permission);
+      if (!mounted) return;
+      if (outcome != PermissionOutcome.granted) {
+        _currentPermission = permission;
+        _applyOutcome(outcome, afterRequest: false);
+        return;
+      }
+    }
+    await _startCamera();
+  }
+
+  void _applyOutcome(PermissionOutcome outcome, {required bool afterRequest}) {
+    switch (outcome) {
+      case PermissionOutcome.granted:
+        _checkPermissions();
+      case PermissionOutcome.denied:
+        _setPhase(afterRequest ? _Phase.denied : _Phase.rationale);
+      case PermissionOutcome.permanentlyDenied:
+        _setPhase(_Phase.blocked);
+      case PermissionOutcome.restricted:
+        _setPhase(_Phase.restricted);
+    }
+  }
+
+  /// Lanza el diálogo REAL de permisos de Android.
+  Future<void> _requestPermission() async {
+    final permissions = _permissions;
+    if (permissions == null) return;
+    _setPhase(_Phase.requesting);
+    final outcome = await permissions.request(_currentPermission);
+    if (!mounted) return;
+    _applyOutcome(outcome, afterRequest: true);
+  }
+
+  Future<void> _openSettings() async {
+    final permissions = _permissions;
+    if (permissions == null) return;
+    _waitingForSettings = true;
+    final opened = await permissions.openSettings();
+    if (!opened) {
+      _waitingForSettings = false;
+      _showMessage('No pudimos abrir Ajustes. Ábrelos manualmente desde tu teléfono.');
+    }
+  }
+
+  /// Al volver de Ajustes se vuelve a comprobar el permiso. Si sigue sin
+  /// concederse se intenta solicitarlo (cubre la opción "Preguntar siempre").
+  Future<void> _recheckAfterSettings() async {
+    final permissions = _permissions;
+    if (permissions == null) return;
+    _setPhase(_Phase.checking);
+    var outcome = await permissions.check(_currentPermission);
+    if (!mounted) return;
+    if (outcome != PermissionOutcome.granted) {
+      outcome = await permissions.request(_currentPermission);
+      if (!mounted) return;
+    }
+    _applyOutcome(outcome, afterRequest: true);
+  }
+
+  // -------------------------------------------------------------------- cámara
+
+  bool _isCurrent(int generation) => mounted && generation == _cameraGeneration;
+
+  Future<void> _disposeController() async {
+    final controller = _controller;
+    _controller = null;
+    if (controller == null) return;
+    try {
+      await controller.dispose();
+    } catch (_) {
+      // La cámara ya estaba liberada.
+    }
+  }
+
+  Future<void> _releaseCamera() async {
+    _cameraGeneration++;
+    await _disposeController();
+  }
+
+  Future<void> _startCamera() async {
+    final generation = ++_cameraGeneration;
+    _setPhase(_Phase.startingCamera);
+    await _disposeController();
+
+    try {
+      final cameras = await availableCameras();
+      if (!_isCurrent(generation)) return;
+      if (cameras.isEmpty) {
+        _setPhase(_Phase.noCamera);
+        return;
+      }
+
+      _canSwitchCamera = cameras.map((c) => c.lensDirection).toSet().length > 1;
+      final description = cameras.firstWhere(
+        (c) => c.lensDirection == _lens,
+        orElse: () => cameras.first,
+      );
+
+      final controller = CameraController(
+        description,
+        ResolutionPreset.high,
+        enableAudio: false,
+      );
+      _controller = controller;
+      await controller.initialize();
+
+      if (!_isCurrent(generation)) {
+        if (identical(_controller, controller)) _controller = null;
+        try {
+          await controller.dispose();
+        } catch (_) {}
+        return;
+      }
+      _setPhase(_Phase.ready);
+    } on CameraException catch (e) {
+      if (!_isCurrent(generation)) return;
+      await _disposeController();
+      if (!mounted) return;
+      switch (e.code) {
+        case 'CameraAccessDenied':
+        case 'CameraAccessDeniedWithoutPrompt':
+          _currentPermission = AppPermission.camera;
+          _setPhase(_Phase.denied);
+        case 'CameraAccessRestricted':
+          _currentPermission = AppPermission.camera;
+          _setPhase(_Phase.restricted);
+        default:
+          _fail(
+            'No pudimos iniciar la cámara. Cierra otras apps que la estén '
+            'usando e inténtalo de nuevo.',
+          );
+      }
+    } catch (_) {
+      if (!_isCurrent(generation)) return;
+      await _disposeController();
+      _fail('Ocurrió un problema al abrir la cámara. Inténtalo de nuevo.');
+    }
+  }
+
+  Future<void> _switchCamera() async {
+    _lens = _lens == CameraLensDirection.back
+        ? CameraLensDirection.front
+        : CameraLensDirection.back;
+    await _startCamera();
+  }
+
+  Future<void> _capture() async {
+    final controller = _controller;
+    if (_phase != _Phase.ready ||
+        controller == null ||
+        !controller.value.isInitialized ||
+        controller.value.isTakingPicture) {
+      return;
+    }
+    _setPhase(_Phase.capturing);
+    try {
+      final file = await controller.takePicture();
+      if (!mounted) return;
+      if (_phase != _Phase.capturing) {
+        // La app pasó a segundo plano durante la captura: se descarta.
+        unawaited(_deleteQuietly(file.path));
+        return;
+      }
+      _photoPath = file.path;
+      await _releaseCamera();
+      _setPhase(_Phase.review);
+    } on CameraException catch (_) {
+      if (!mounted || _phase != _Phase.capturing) return;
+      await _releaseCamera();
+      _fail('No pudimos tomar la foto. Inténtalo de nuevo.');
+    }
+  }
+
+  // ------------------------------------------------------ revisión / confirmar
+
+  void _retake() {
+    _discardPhoto();
+    _checkPermissions();
+  }
+
+  Future<void> _confirm() async {
+    final challenge = _challenge;
+    final path = _photoPath;
+    if (challenge == null || path == null || _phase != _Phase.review) return;
+
+    final app = AppScope.read(context);
+    _setPhase(_Phase.submitting);
+    try {
+      // Comprueba que la foto realmente exista antes de enviarla.
+      final exists = await File(path).exists();
+      if (!mounted) return;
+      if (!exists) {
+        _showMessage('No encontramos la foto. Toma otra, por favor.');
+        _retake();
+        return;
+      }
+
+      final evidence = Evidence(
+        id: 'ev-${DateTime.now().microsecondsSinceEpoch}',
+        challengeId: challenge.id,
+        filePath: path,
+        type: challenge.evidenceType,
+        capturedAt: DateTime.now(),
+      );
+      final result = await app.completeChallenge(challenge, evidence);
+      if (!mounted) return;
+      if (result.approved) {
+        _confirmed = true;
+        Navigator.of(context).pushReplacementNamed(
+          AppRoutes.reward,
+          arguments: result,
+        );
+      } else {
+        _setPhase(_Phase.review);
+        _showMessage(result.message);
+      }
+    } catch (error, stackTrace) {
+      debugPrint('Error al confirmar la evidencia: $error\n$stackTrace');
+      if (!mounted) return;
+      _setPhase(_Phase.review);
+      _showMessage('No pudimos validar tu evidencia. Inténtalo de nuevo.');
+    }
+  }
+
+  void _discardPhoto() {
+    final path = _photoPath;
+    _photoPath = null;
+    if (path != null) unawaited(_deleteQuietly(path));
+  }
+
+  Future<void> _deleteQuietly(String path) async {
+    try {
+      final file = File(path);
+      if (await file.exists()) await file.delete();
+    } catch (_) {
+      // Archivo temporal: si no se puede borrar, no pasa nada.
+    }
+  }
+
+  // ------------------------------------------------------------------ interfaz
+
+  IconData get _permissionIcon => _currentPermission == AppPermission.camera
+      ? Icons.camera_alt_rounded
+      : Icons.mic_rounded;
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: _phase != _Phase.submitting,
+      child: Scaffold(
+        appBar: ccAppBar('Capturar evidencia'),
+        body: SafeArea(child: _buildBody()),
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    final label = _currentPermission.label;
+    switch (_phase) {
+      case _Phase.checking:
+        return const LoadingView(label: 'Comprobando permisos...');
+      case _Phase.requesting:
+        return const LoadingView(label: 'Esperando tu respuesta...');
+      case _Phase.startingCamera:
+        return const LoadingView(label: 'Abriendo cámara...');
+      case _Phase.rationale:
+        return _StatusPanel(
+          icon: _permissionIcon,
+          title: 'Permiso de $label',
+          message: _currentPermission.rationale,
+          primaryLabel: 'Continuar',
+          onPrimary: _requestPermission,
+          secondaryLabel: 'Ahora no',
+          onSecondary: _close,
+        );
+      case _Phase.denied:
+        return _StatusPanel(
+          icon: Icons.no_photography_rounded,
+          iconColor: AppColors.orange,
+          title: 'Permiso rechazado',
+          message: 'Rechazaste el permiso de $label. Sin él no podemos capturar '
+              'la evidencia de este reto. Puedes intentarlo de nuevo cuando quieras.',
+          primaryLabel: 'Intentar de nuevo',
+          onPrimary: _requestPermission,
+          secondaryLabel: 'Volver',
+          onSecondary: _close,
+        );
+      case _Phase.blocked:
+        return _StatusPanel(
+          icon: Icons.lock_rounded,
+          iconColor: AppColors.error,
+          title: 'Permiso bloqueado',
+          message: 'Android ya no mostrará la solicitud del permiso de $label. '
+              'Ábrelo en Ajustes > Permisos y actívalo; al volver continuamos '
+              'automáticamente.',
+          primaryLabel: 'Abrir ajustes',
+          onPrimary: _openSettings,
+          secondaryLabel: 'Volver',
+          onSecondary: _close,
+        );
+      case _Phase.restricted:
+        return _StatusPanel(
+          icon: Icons.lock_rounded,
+          iconColor: AppColors.error,
+          title: 'Acceso restringido',
+          message: 'El permiso de $label está restringido en este dispositivo '
+              'y no podemos solicitarlo.',
+          primaryLabel: 'Volver',
+          onPrimary: _close,
+        );
+      case _Phase.noCamera:
+        return _StatusPanel(
+          icon: Icons.no_photography_rounded,
+          iconColor: AppColors.orange,
+          title: 'No encontramos cámara',
+          message: 'No hay una cámara disponible en este dispositivo.',
+          primaryLabel: 'Reintentar',
+          onPrimary: _checkPermissions,
+          secondaryLabel: 'Volver',
+          onSecondary: _close,
+        );
+      case _Phase.error:
+        return _StatusPanel(
+          icon: Icons.error_outline_rounded,
+          iconColor: AppColors.error,
+          title: 'Algo no salió bien',
+          message: _errorMessage,
+          primaryLabel: _errorRetryable ? 'Reintentar' : 'Volver',
+          onPrimary: _errorRetryable ? _checkPermissions : _close,
+          secondaryLabel: _errorRetryable ? 'Volver' : null,
+          onSecondary: _errorRetryable ? _close : null,
+        );
+      case _Phase.ready:
+      case _Phase.capturing:
+        return _buildCamera();
+      case _Phase.review:
+      case _Phase.submitting:
+        return _buildReview();
+    }
+  }
+
+  Widget _buildCamera() {
+    final challenge = _challenge;
+    final controller = _controller;
+    if (challenge == null) return const LoadingView();
+
+    final cameraReady = controller != null && controller.value.isInitialized;
+    final capturing = _phase == _Phase.capturing;
+
+    return Column(
+      children: [
+        _ChallengeHint(text: challenge.objective),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: ColoredBox(
+                color: Colors.black,
+                child: Center(
+                  child: cameraReady
+                      ? CameraPreview(controller)
+                      : const CircularProgressIndicator(),
+                ),
+              ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              SizedBox(
+                width: 56,
+                child: _canSwitchCamera
+                    ? IconButton(
+                        tooltip: 'Cambiar cámara',
+                        onPressed: capturing ? null : _switchCamera,
+                        iconSize: 28,
+                        icon: const Icon(Icons.cameraswitch_rounded),
+                      )
+                    : null,
+              ),
+              Semantics(
+                button: true,
+                label: 'Tomar foto',
+                child: GestureDetector(
+                  onTap: capturing ? null : _capture,
+                  child: Container(
+                    width: 76,
+                    height: 76,
+                    padding: const EdgeInsets.all(5),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 4),
+                    ),
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: capturing
+                            ? AppColors.textSecondary
+                            : AppColors.yellow,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 56),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReview() {
+    final path = _photoPath;
+    final submitting = _phase == _Phase.submitting;
+
+    return Column(
+      children: [
+        const _ChallengeHint(text: 'Revisa tu evidencia: ¿se ve claro el reto?'),
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: ColoredBox(
+                color: Colors.black,
+                child: path == null
+                    ? const SizedBox.shrink()
+                    : Image.file(
+                        File(path),
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: double.infinity,
+                        errorBuilder: (context, error, stackTrace) => const Center(
+                          child: Icon(
+                            Icons.broken_image_outlined,
+                            color: AppColors.textSecondary,
+                            size: 48,
+                          ),
+                        ),
+                      ),
+              ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+          child: Column(
+            children: [
+              PrimaryButton(
+                label: 'Confirmar evidencia',
+                icon: Icons.check_circle_rounded,
+                loading: submitting,
+                onPressed: _confirm,
+              ),
+              const SizedBox(height: 12),
+              SecondaryButton(
+                label: 'Repetir',
+                icon: Icons.refresh_rounded,
+                onPressed: submitting ? null : _retake,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ChallengeHint extends StatelessWidget {
+  const _ChallengeHint({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+      child: CCCard(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            const Icon(Icons.flag_rounded, color: AppColors.yellow, size: 20),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                text,
+                style: AppText.body,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Panel genérico para los estados de permiso y error.
+class _StatusPanel extends StatelessWidget {
+  const _StatusPanel({
+    required this.icon,
+    required this.title,
+    required this.message,
+    required this.primaryLabel,
+    required this.onPrimary,
+    this.secondaryLabel,
+    this.onSecondary,
+    this.iconColor = AppColors.yellow,
+  });
+
+  final IconData icon;
+  final Color iconColor;
+  final String title;
+  final String message;
+  final String primaryLabel;
+  final VoidCallback onPrimary;
+  final String? secondaryLabel;
+  final VoidCallback? onSecondary;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(28),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.14),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 38, color: iconColor),
+              ),
+              const SizedBox(height: 22),
+              Text(title, textAlign: TextAlign.center, style: AppText.title),
+              const SizedBox(height: 10),
+              Text(message, textAlign: TextAlign.center, style: AppText.bodyMuted),
+              const SizedBox(height: 28),
+              PrimaryButton(label: primaryLabel, onPressed: onPrimary),
+              if (secondaryLabel != null && onSecondary != null) ...[
+                const SizedBox(height: 12),
+                SecondaryButton(label: secondaryLabel!, onPressed: onSecondary),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Recompensa
+// -----------------------------------------------------------------------------
+
+class RewardScreen extends StatelessWidget {
+  const RewardScreen({super.key, required this.result});
+
+  final RewardResult result;
+
+  void _goHome(BuildContext context) {
+    Navigator.of(context).popUntil(ModalRoute.withName(AppRoutes.main));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final streakText =
+        '${result.streak} ${result.streak == 1 ? 'día' : 'días'}';
+
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, popResult) {
+        if (!didPop) _goHome(context);
+      },
+      child: Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(28),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 420),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0, end: 1),
+                      duration: const Duration(milliseconds: 700),
+                      curve: Curves.elasticOut,
+                      builder: (context, value, child) =>
+                          Transform.scale(scale: value, child: child),
+                      child: Container(
+                        width: 104,
+                        height: 104,
+                        decoration: BoxDecoration(
+                          color: AppColors.success.withValues(alpha: 0.16),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.check_circle_rounded,
+                          size: 64,
+                          color: AppColors.success,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    const Text('¡Reto completado!', style: AppText.display),
+                    const SizedBox(height: 8),
+                    Text(
+                      result.challengeTitle,
+                      textAlign: TextAlign.center,
+                      style: AppText.bodyMuted,
+                    ),
+                    const SizedBox(height: 28),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: StatBox(
+                            icon: Icons.bolt_rounded,
+                            value: '+${result.xpGained}',
+                            label: 'XP',
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: StatBox(
+                            icon: Icons.monetization_on_rounded,
+                            value: '+${result.coinsGained}',
+                            label: 'MONEDAS',
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: StatBox(
+                            icon: Icons.local_fire_department_rounded,
+                            color: AppColors.orange,
+                            value: streakText,
+                            label: 'RACHA',
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (result.doubleXpUsed) ...[
+                      const SizedBox(height: 16),
+                      const CCCard(
+                        child: Row(
+                          children: [
+                            Icon(Icons.bolt_rounded, color: AppColors.yellow, size: 28),
+                            SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Doble XP aplicado: tu ventaja de la tienda duplicó el XP de este reto.',
+                                style: AppText.bodyMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    if (result.leveledUp) ...[
+                      const SizedBox(height: 16),
+                      CCCard(
+                        highlight: true,
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.military_tech_rounded,
+                              color: AppColors.yellow,
+                              size: 32,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '¡Subiste al nivel ${result.level}!',
+                                    style: AppText.heading,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(result.levelTitle, style: AppText.bodyMuted),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+            child: PrimaryButton(
+              label: 'Volver al inicio',
+              icon: Icons.home_rounded,
+              onPressed: () => _goHome(context),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Perfil / Mi Muro (una sola pantalla; contenido completo en la Entrega 3)
+// -----------------------------------------------------------------------------
+
+class ProfileScreen extends StatelessWidget {
+  const ProfileScreen({super.key});
+
+  Future<void> _logout(BuildContext context) async {
+    final app = AppScope.read(context);
+    final navigator = Navigator.of(context);
+    await app.signOut();
+    navigator.pushNamedAndRemoveUntil(AppRoutes.welcome, (route) => false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = AppScope.of(context);
+    final user = state.user;
+    final level = state.levelInfo;
+
+    return Scaffold(
+      appBar: ccAppBar('Perfil / Mi Muro'),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+        children: [
+          Center(child: UserAvatar(initials: user.initials, radius: 44)),
+          const SizedBox(height: 16),
+          Center(child: Text(user.displayName, style: AppText.title)),
+          const SizedBox(height: 4),
+          Center(child: Text(user.email, style: AppText.bodyMuted)),
+          const SizedBox(height: 24),
+          CCCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Nivel ${level.level}', style: AppText.heading),
+                    Text(
+                      '${level.xpIntoLevel}/${level.xpForNextLevel} XP',
+                      style: AppText.label,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Text(level.title, style: AppText.bodyMuted),
+                const SizedBox(height: 12),
+                CCProgressBar(value: level.progress),
+                const SizedBox(height: 8),
+                Text(
+                  'Te faltan ${level.xpRemaining} XP para el siguiente nivel',
+                  style: AppText.label,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: StatBox(
+                  icon: Icons.monetization_on_rounded,
+                  value: '${user.coins}',
+                  label: 'MONEDAS',
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: StatBox(
+                  icon: Icons.local_fire_department_rounded,
+                  color: AppColors.orange,
+                  value: '${user.streak}',
+                  label: 'RACHA',
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: StatBox(
+                  icon: Icons.check_circle_rounded,
+                  color: AppColors.success,
+                  value: '${user.completedChallenges}',
+                  label: 'RETOS',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const CCCard(
+            child: Row(
+              children: [
+                Icon(Icons.emoji_events_rounded, color: AppColors.yellow),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Muy pronto: tus insignias, estadísticas y logros en un solo muro.',
+                    style: AppText.bodyMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          SecondaryButton(
+            label: 'Cerrar sesión',
+            icon: Icons.logout_rounded,
+            onPressed: () => _logout(context),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// BONCHE
+// -----------------------------------------------------------------------------
+
+class BoncheScreen extends StatelessWidget {
+  const BoncheScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final state = AppScope.of(context);
+
+    if (state.socialLoading) {
+      return const LoadingView(label: 'Cargando tu bonche...');
+    }
+    final error = state.socialError;
+    if (error != null) {
+      return ErrorStateView(message: error, onRetry: () => state.loadSocial());
+    }
+    final group = state.group;
+    if (group == null) {
+      return const EmptyStateView(
+        icon: Icons.groups_rounded,
+        title: 'Aún no tienes bonche',
+        message: 'Cuando te unas a un grupo privado, aparecerá aquí.',
+      );
+    }
+
+    final members = state.members;
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+      children: [
+        _GroupHeaderCard(
+          group: group,
+          memberCount: members.length,
+          leader: state.memberById(group.leaderId),
+        ),
+        const SizedBox(height: 12),
+        _InviteCodeCard(code: group.inviteCode),
+        const SizedBox(height: 28),
+        const SectionTitle('Integrantes'),
+        _MembersCard(
+          members: members,
+          leaderId: group.leaderId,
+          myId: state.user.id,
+        ),
+        const SizedBox(height: 28),
+        const SectionTitle('Retos del bonche'),
+        _ChallengeSettings(group: group, totalMembers: members.length),
+        const SizedBox(height: 28),
+        const SectionTitle('Charla del bonche'),
+        const _ChatCard(),
+      ],
+    );
+  }
+}
+
+class _GroupHeaderCard extends StatelessWidget {
+  const _GroupHeaderCard({
+    required this.group,
+    required this.memberCount,
+    required this.leader,
+  });
+
+  final GroupInfo group;
+  final int memberCount;
+  final GroupMember? leader;
+
+  @override
+  Widget build(BuildContext context) {
+    final since = '${kMonthsLong[group.createdAt.month - 1].toLowerCase()} de ${group.createdAt.year}';
+
+    return CCCard(
+      highlight: true,
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: AppColors.yellow,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Icon(
+                  Icons.groups_rounded,
+                  color: AppColors.onYellow,
+                  size: 34,
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(group.name, style: AppText.title),
+                    const SizedBox(height: 4),
+                    Text(group.tagline, style: AppText.bodyMuted),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              const InfoPill(
+                label: 'Grupo privado',
+                icon: Icons.lock_rounded,
+                color: AppColors.yellow,
+              ),
+              InfoPill(label: '$memberCount integrantes', icon: Icons.groups_rounded),
+              InfoPill(
+                label: 'Líder: ${leader?.firstName ?? '-'}',
+                icon: Icons.workspace_premium_rounded,
+                color: AppColors.orange,
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text('Activo desde $since', style: AppText.label),
+        ],
+      ),
+    );
+  }
+}
+
+class _InviteCodeCard extends StatelessWidget {
+  const _InviteCodeCard({required this.code});
+
+  final String code;
+
+  Future<void> _copy(BuildContext context) async {
+    await Clipboard.setData(ClipboardData(text: code));
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Código copiado. ¡Compártelo con tu parche!')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CCCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: AppColors.yellowSoft,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(Icons.vpn_key_rounded, color: AppColors.yellow),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('CÓDIGO DE INVITACIÓN', style: AppText.label),
+                    const SizedBox(height: 2),
+                    Text(
+                      code,
+                      style: AppText.heading.copyWith(letterSpacing: 1.5),
+                    ),
+                  ],
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () => _copy(context),
+                icon: const Icon(Icons.content_copy_rounded, size: 18),
+                label: const Text('Copiar'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Text(
+            'El bonche es privado: solo entra quien tenga este código.',
+            style: AppText.bodyMuted,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MembersCard extends StatelessWidget {
+  const _MembersCard({
+    required this.members,
+    required this.leaderId,
+    required this.myId,
+  });
+
+  final List<GroupMember> members;
+  final String leaderId;
+  final String myId;
+
+  @override
+  Widget build(BuildContext context) {
+    return CCCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Column(
+        children: [
+          for (var i = 0; i < members.length; i++) ...[
+            _MemberRow(
+              member: members[i],
+              isLeader: members[i].id == leaderId,
+              isMe: members[i].id == myId,
+            ),
+            if (i != members.length - 1)
+              const Divider(height: 1, color: AppColors.border),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _MemberRow extends StatelessWidget {
+  const _MemberRow({
+    required this.member,
+    required this.isLeader,
+    required this.isMe,
+  });
+
+  final GroupMember member;
+  final bool isLeader;
+  final bool isMe;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        children: [
+          UserAvatar(initials: member.initials, radius: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(member.name, style: AppText.heading),
+                    if (isLeader)
+                      const InfoPill(
+                        label: 'Líder',
+                        icon: Icons.workspace_premium_rounded,
+                        color: AppColors.orange,
+                      ),
+                    if (isMe)
+                      const InfoPill(label: 'Tú', color: AppColors.yellow),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Text('Nivel ${member.level}', style: AppText.bodyMuted),
+                    const SizedBox(width: 12),
+                    const Icon(
+                      Icons.local_fire_department_rounded,
+                      size: 16,
+                      color: AppColors.orange,
+                    ),
+                    const SizedBox(width: 2),
+                    Text('${member.streak}', style: AppText.bodyMuted),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChallengeSettings extends StatelessWidget {
+  const _ChallengeSettings({required this.group, required this.totalMembers});
+
+  final GroupInfo group;
+  final int totalMembers;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: StatBox(
+                icon: Icons.bolt_rounded,
+                value: '${group.dailyChallenges}',
+                label: 'RETOS AL DÍA',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: StatBox(
+                icon: Icons.timer_outlined,
+                value: windowLabel(group.windowMinutes),
+                label: 'POR RETO',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: StatBox(
+                icon: Icons.groups_rounded,
+                value: '$totalMembers',
+                label: 'INTEGRANTES',
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        CCCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('HORARIOS', style: AppText.label),
+              const SizedBox(height: 12),
+              for (final schedule in group.schedules)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: _ScheduleRow(schedule: schedule, totalMembers: totalMembers),
+                ),
+              Text(
+                'Cada reto dura ${windowLabel(group.windowMinutes)}. Los horarios se eligen para coincidir con el momento en que más integrantes están disponibles.',
+                style: AppText.bodyMuted,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        CCCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('CATEGORÍAS', style: AppText.label),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (final category in group.categories)
+                    InfoPill(
+                      label: category.label,
+                      icon: category.icon,
+                      color: AppColors.yellow,
+                    ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Solo el líder puede cambiar horarios y categorías.',
+                style: AppText.bodyMuted,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ScheduleRow extends StatelessWidget {
+  const _ScheduleRow({required this.schedule, required this.totalMembers});
+
+  final GroupSchedule schedule;
+  final int totalMembers;
+
+  @override
+  Widget build(BuildContext context) {
+    final everyone = schedule.availableMembers >= totalMembers;
+    final ratio =
+        totalMembers == 0 ? 0.0 : schedule.availableMembers / totalMembers;
+
+    return Row(
+      children: [
+        Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: AppColors.yellowSoft,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: const Icon(Icons.schedule_rounded, color: AppColors.yellow),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(schedule.label, style: AppText.heading),
+                  Text(
+                    '${schedule.availableMembers}/$totalMembers disponibles',
+                    style: AppText.label,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              CCProgressBar(
+                value: ratio,
+                height: 6,
+                color: everyone ? AppColors.success : AppColors.yellow,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ChatCard extends StatefulWidget {
+  const _ChatCard();
+
+  @override
+  State<_ChatCard> createState() => _ChatCardState();
+}
+
+class _ChatCardState extends State<_ChatCard> {
+  final TextEditingController _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _send() {
+    final text = _controller.text;
+    if (text.trim().isEmpty) return;
+    AppScope.read(context).sendMessage(text);
+    _controller.clear();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = AppScope.of(context);
+    final all = state.messages;
+    final visible = all.length > 8 ? all.sublist(all.length - 8) : all;
+    final myId = state.user.id;
+
+    return CCCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.chat_bubble_outline_rounded,
+                color: AppColors.yellow,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              const Expanded(child: Text('Conversación del grupo', style: AppText.heading)),
+              const InfoPill(label: 'Demo'),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (visible.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Text(
+                'Sé el primero en escribirle al bonche.',
+                style: AppText.bodyMuted,
+              ),
+            )
+          else
+            for (final message in visible)
+              _ChatBubble(
+                message: message,
+                author: message.authorId == null
+                    ? null
+                    : state.memberById(message.authorId!),
+                isMine: message.authorId == myId,
+              ),
+          const SizedBox(height: 12),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _controller,
+                  textInputAction: TextInputAction.send,
+                  onSubmitted: (_) => _send(),
+                  minLines: 1,
+                  maxLines: 3,
+                  decoration: ccInputDecoration(
+                    label: 'Escribe al bonche',
+                    icon: Icons.chat_bubble_outline_rounded,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              IconButton.filled(
+                onPressed: _send,
+                style: IconButton.styleFrom(
+                  backgroundColor: AppColors.yellow,
+                  foregroundColor: AppColors.onYellow,
+                ),
+                icon: const Icon(Icons.send_rounded),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChatBubble extends StatelessWidget {
+  const _ChatBubble({
+    required this.message,
+    required this.author,
+    required this.isMine,
+  });
+
+  final ChatMessage message;
+  final GroupMember? author;
+  final bool isMine;
+
+  @override
+  Widget build(BuildContext context) {
+    if (message.isSystem) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Center(
+          child: Wrap(
+            alignment: WrapAlignment.center,
+            children: [
+              InfoPill(
+                label: message.text,
+                icon: Icons.check_circle_rounded,
+                color: AppColors.success,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final maxWidth = MediaQuery.sizeOf(context).width * 0.68;
+    final textColor = isMine ? AppColors.onYellow : AppColors.textPrimary;
+
+    return Align(
+      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: isMine ? AppColors.yellow : AppColors.surfaceAlt,
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(16),
+              topRight: const Radius.circular(16),
+              bottomLeft: Radius.circular(isMine ? 16 : 4),
+              bottomRight: Radius.circular(isMine ? 4 : 16),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (!isMine)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Text(
+                    author?.firstName ?? 'Bonchero',
+                    style: AppText.label.copyWith(color: AppColors.yellow),
+                  ),
+                ),
+              Text(message.text, style: AppText.body.copyWith(color: textColor)),
+              const SizedBox(height: 4),
+              Text(
+                formatClock(message.sentAt),
+                style: AppText.label.copyWith(
+                  fontSize: 10,
+                  color: isMine
+                      ? AppColors.onYellow.withValues(alpha: 0.65)
+                      : AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// -----------------------------------------------------------------------------
+// RANKING
+// -----------------------------------------------------------------------------
+
+class RankingScreen extends StatefulWidget {
+  const RankingScreen({super.key});
+
+  @override
+  State<RankingScreen> createState() => _RankingScreenState();
+}
+
+class _RankingScreenState extends State<RankingScreen> {
+  RankingPeriod _period = RankingPeriod.weekly;
+
+  @override
+  Widget build(BuildContext context) {
+    final state = AppScope.of(context);
+
+    if (state.socialLoading) {
+      return const LoadingView(label: 'Cargando el ranking...');
+    }
+    final error = state.socialError;
+    if (error != null) {
+      return ErrorStateView(message: error, onRetry: () => state.loadSocial());
+    }
+    final board = state.boardFor(_period);
+    if (board == null) {
+      return const EmptyStateView(
+        icon: Icons.leaderboard_rounded,
+        title: 'Aún no hay ranking',
+        message: 'Completa retos con tu bonche y aquí verás la clasificación.',
+      );
+    }
+
+    final entries = state.liveEntries(_period);
+    final myIndex = entries.indexWhere((e) => e.memberId == state.user.id);
+    final me = myIndex >= 0 ? entries[myIndex] : null;
+    final groupAverage =
+        board.groupSeries.isEmpty ? 0 : board.groupSeries.last.round();
+    final myPoints = me?.points ?? 0;
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+      children: [
+        SegmentedTabs(
+          labels: const ['Semanal', 'Mensual'],
+          selected: _period == RankingPeriod.weekly ? 0 : 1,
+          onChanged: (i) => setState(() {
+            _period = i == 0 ? RankingPeriod.weekly : RankingPeriod.monthly;
+          }),
+        ),
+        const SizedBox(height: 16),
+        _PeriodHeaderCard(board: board),
+        const SizedBox(height: 20),
+        if (entries.length >= 3) ...[
+          _Podium(entries: entries, state: state),
+          const SizedBox(height: 24),
+        ],
+        const SectionTitle('Tabla de posiciones'),
+        _StandingsCard(entries: entries, state: state),
+        if (me != null) ...[
+          const SizedBox(height: 28),
+          const SectionTitle('Tus estadísticas'),
+          _MyStats(
+            rank: myIndex + 1,
+            entry: me,
+            totalChallenges: board.totalChallenges,
+          ),
+        ],
+        const SizedBox(height: 28),
+        const SectionTitle('Evolución'),
+        CCCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                height: 190,
+                width: double.infinity,
+                child: CustomPaint(
+                  painter: _EvolutionChartPainter(
+                    labels: board.chartLabels,
+                    userValues: state.liveUserSeries(_period),
+                    groupValues: board.groupSeries,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Row(
+                children: [
+                  _LegendDot(color: AppColors.yellow, label: 'Tú'),
+                  SizedBox(width: 16),
+                  _LegendDot(
+                    color: AppColors.textSecondary,
+                    label: 'Promedio del bonche',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Llevas $myPoints puntos; el promedio del bonche es $groupAverage.',
+                style: AppText.bodyMuted,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 28),
+        const SectionTitle('Historial'),
+        _HistoryCard(board: board, state: state),
+        const SizedBox(height: 16),
+        Text(
+          _period == RankingPeriod.weekly
+              ? 'El ranking semanal se reinicia cada lunes. Tu historial se conserva.'
+              : 'El ranking mensual se reinicia cada mes. Tu historial se conserva.',
+          textAlign: TextAlign.center,
+          style: AppText.label,
+        ),
+      ],
+    );
+  }
+}
+
+class _PeriodHeaderCard extends StatelessWidget {
+  const _PeriodHeaderCard({required this.board});
+
+  final RankingBoard board;
+
+  @override
+  Widget build(BuildContext context) {
+    return CCCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.calendar_month_rounded,
+                color: AppColors.yellow,
+                size: 22,
+              ),
+              const SizedBox(width: 10),
+              Expanded(child: Text(board.periodLabel, style: AppText.heading)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Icon(
+                Icons.restart_alt_rounded,
+                color: AppColors.textSecondary,
+                size: 18,
+              ),
+              const SizedBox(width: 10),
+              Expanded(child: Text(board.resetLabel, style: AppText.bodyMuted)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Podium extends StatelessWidget {
+  const _Podium({required this.entries, required this.state});
+
+  final List<RankingEntry> entries;
+  final AppState state;
+
+  Widget _slot(int rank, RankingEntry entry, double barHeight, Color color) {
+    final member = state.memberById(entry.memberId);
+    return Expanded(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (rank == 1)
+            const Icon(
+              Icons.workspace_premium_rounded,
+              color: AppColors.yellow,
+              size: 28,
+            )
+          else
+            const SizedBox(height: 28),
+          UserAvatar(
+            initials: member?.initials ?? '?',
+            radius: rank == 1 ? 30 : 24,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            member?.firstName ?? 'Jugador',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppText.body.copyWith(fontSize: 14, fontWeight: FontWeight.w700),
+          ),
+          Text('${entry.points} pts', style: AppText.label),
+          const SizedBox(height: 8),
+          Container(
+            height: barHeight,
+            width: double.infinity,
+            margin: const EdgeInsets.symmetric(horizontal: 6),
+            padding: const EdgeInsets.only(top: 10),
+            alignment: Alignment.topCenter,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.18),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+              border: Border.all(color: color.withValues(alpha: 0.6)),
+            ),
+            child: Text('$rank', style: AppText.title.copyWith(color: color)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        _slot(2, entries[1], 84, AppColors.silver),
+        _slot(1, entries[0], 112, AppColors.yellow),
+        _slot(3, entries[2], 64, AppColors.orange),
+      ],
+    );
+  }
+}
+
+class _StandingsCard extends StatelessWidget {
+  const _StandingsCard({required this.entries, required this.state});
+
+  final List<RankingEntry> entries;
+  final AppState state;
+
+  @override
+  Widget build(BuildContext context) {
+    return CCCard(
+      padding: const EdgeInsets.fromLTRB(12, 14, 12, 10),
+      child: Column(
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(bottom: 8),
+            child: Row(
+              children: [
+                SizedBox(width: 22, child: Text('#', style: AppText.label)),
+                SizedBox(width: 30),
+                SizedBox(width: 46),
+                Expanded(child: Text('JUGADOR', style: AppText.label)),
+                SizedBox(
+                  width: 44,
+                  child: Text('RETOS', textAlign: TextAlign.center, style: AppText.label),
+                ),
+                SizedBox(
+                  width: 60,
+                  child: Text('PTS', textAlign: TextAlign.right, style: AppText.label),
+                ),
+              ],
+            ),
+          ),
+          for (var i = 0; i < entries.length; i++)
+            _StandingRow(
+              rank: i + 1,
+              entry: entries[i],
+              member: state.memberById(entries[i].memberId),
+              isMe: entries[i].memberId == state.user.id,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StandingRow extends StatelessWidget {
+  const _StandingRow({
+    required this.rank,
+    required this.entry,
+    required this.member,
+    required this.isMe,
+  });
+
+  final int rank;
+  final RankingEntry entry;
+  final GroupMember? member;
+  final bool isMe;
+
+  @override
+  Widget build(BuildContext context) {
+    final delta = entry.previousRank - rank;
+    final winsText = '${entry.wins} ${entry.wins == 1 ? 'victoria' : 'victorias'}';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      decoration: BoxDecoration(
+        color: isMe ? AppColors.yellowSoft : Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 22,
+            child: Text(
+              '$rank',
+              style: AppText.heading.copyWith(
+                color: rank == 1 ? AppColors.yellow : AppColors.textPrimary,
+              ),
+            ),
+          ),
+          SizedBox(width: 30, child: _RankDelta(delta: delta)),
+          UserAvatar(initials: member?.initials ?? '?', radius: 16),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isMe ? '${member?.firstName ?? 'Tú'} (tú)' : member?.firstName ?? 'Jugador',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppText.body.copyWith(fontWeight: FontWeight.w700),
+                ),
+                Text(winsText, style: AppText.label.copyWith(fontSize: 11)),
+              ],
+            ),
+          ),
+          SizedBox(
+            width: 44,
+            child: Text(
+              '${entry.completed}',
+              textAlign: TextAlign.center,
+              style: AppText.body,
+            ),
+          ),
+          SizedBox(
+            width: 60,
+            child: Text(
+              '${entry.points}',
+              textAlign: TextAlign.right,
+              style: AppText.heading,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RankDelta extends StatelessWidget {
+  const _RankDelta({required this.delta});
+
+  final int delta;
+
+  @override
+  Widget build(BuildContext context) {
+    if (delta == 0) {
+      return const Icon(
+        Icons.remove_rounded,
+        size: 16,
+        color: AppColors.textSecondary,
+      );
+    }
+    final up = delta > 0;
+    final color = up ? AppColors.success : AppColors.error;
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          up ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
+          size: 20,
+          color: color,
+        ),
+        Text(
+          '${delta.abs()}',
+          style: AppText.label.copyWith(color: color, fontSize: 11),
+        ),
+      ],
+    );
+  }
+}
+
+class _MyStats extends StatelessWidget {
+  const _MyStats({
+    required this.rank,
+    required this.entry,
+    required this.totalChallenges,
+  });
+
+  final int rank;
+  final RankingEntry entry;
+  final int totalChallenges;
+
+  @override
+  Widget build(BuildContext context) {
+    final percent = totalChallenges == 0
+        ? 0
+        : ((entry.completed * 100) / totalChallenges).clamp(0, 100).round();
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: StatBox(
+                icon: Icons.leaderboard_rounded,
+                value: '#$rank',
+                label: 'PUESTO',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: StatBox(
+                icon: Icons.stars_rounded,
+                value: '${entry.points}',
+                label: 'PUNTOS',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: StatBox(
+                icon: Icons.check_circle_rounded,
+                color: AppColors.success,
+                value: '${entry.completed}',
+                label: 'RETOS',
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: StatBox(
+                icon: Icons.trending_up_rounded,
+                color: AppColors.success,
+                value: '$percent%',
+                label: 'CUMPLIMIENTO',
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: StatBox(
+                icon: Icons.emoji_events_rounded,
+                color: AppColors.orange,
+                value: '${entry.wins}',
+                label: 'VICTORIAS',
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _LegendDot extends StatelessWidget {
+  const _LegendDot({required this.color, required this.label});
+
+  final Color color;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Text(label, style: AppText.label),
+      ],
+    );
+  }
+}
+
+class _HistoryCard extends StatelessWidget {
+  const _HistoryCard({required this.board, required this.state});
+
+  final RankingBoard board;
+  final AppState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = board.history;
+    return CCCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      child: Column(
+        children: [
+          for (var i = 0; i < items.length; i++) ...[
+            _HistoryRow(entry: items[i], state: state),
+            if (i != items.length - 1)
+              const Divider(height: 1, color: AppColors.border),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _HistoryRow extends StatelessWidget {
+  const _HistoryRow({required this.entry, required this.state});
+
+  final HistoryEntry entry;
+  final AppState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final winner = state.memberById(entry.winnerId);
+    final iWon = entry.winnerId == state.user.id;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: iWon ? AppColors.yellowSoft : AppColors.surfaceAlt,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              Icons.emoji_events_rounded,
+              size: 22,
+              color: iWon ? AppColors.yellow : AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(entry.label, style: AppText.body.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 2),
+                Text(
+                  iWon ? '¡Ganaste tú!' : 'Ganó ${winner?.firstName ?? 'otro integrante'}',
+                  style: AppText.bodyMuted,
+                ),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text('Tú: ${entry.userRank}.º', style: AppText.body.copyWith(fontWeight: FontWeight.w700)),
+              const SizedBox(height: 2),
+              Text('${entry.userPoints} pts', style: AppText.label),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Gráfica de líneas (tú vs. promedio del bonche), dibujada en código.
+class _EvolutionChartPainter extends CustomPainter {
+  _EvolutionChartPainter({
+    required this.labels,
+    required this.userValues,
+    required this.groupValues,
+  });
+
+  final List<String> labels;
+  final List<double> userValues;
+  final List<double> groupValues;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const leftPad = 8.0;
+    const rightPad = 8.0;
+    const topPad = 12.0;
+    const bottomPad = 26.0;
+    final chartW = size.width - leftPad - rightPad;
+    final chartH = size.height - topPad - bottomPad;
+    if (chartW <= 0 || chartH <= 0 || labels.isEmpty) return;
+
+    var maxValue = 1.0;
+    for (final value in userValues) {
+      if (value > maxValue) maxValue = value;
+    }
+    for (final value in groupValues) {
+      if (value > maxValue) maxValue = value;
+    }
+    maxValue *= 1.15;
+
+    final gridPaint = Paint()
+      ..color = AppColors.border
+      ..strokeWidth = 1;
+    for (var i = 0; i <= 3; i++) {
+      final y = topPad + chartH * i / 3;
+      canvas.drawLine(
+        Offset(leftPad, y),
+        Offset(leftPad + chartW, y),
+        gridPaint,
+      );
+    }
+
+    double xAt(int i) => labels.length == 1
+        ? leftPad + chartW / 2
+        : leftPad + chartW * i / (labels.length - 1);
+    double yAt(double v) => topPad + chartH * (1 - v / maxValue);
+
+    void drawSeries(
+      List<double> values,
+      Color color,
+      double strokeWidth,
+      bool fill,
+    ) {
+      if (values.isEmpty) return;
+      final count = values.length > labels.length ? labels.length : values.length;
+
+      final path = Path()..moveTo(xAt(0), yAt(values[0]));
+      for (var i = 1; i < count; i++) {
+        path.lineTo(xAt(i), yAt(values[i]));
+      }
+
+      if (fill && count > 1) {
+        final area = Path.from(path)
+          ..lineTo(xAt(count - 1), topPad + chartH)
+          ..lineTo(xAt(0), topPad + chartH)
+          ..close();
+        canvas.drawPath(
+          area,
+          Paint()
+            ..color = color.withValues(alpha: 0.12)
+            ..style = PaintingStyle.fill,
+        );
+      }
+
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = color
+          ..strokeWidth = strokeWidth
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round,
+      );
+
+      final dotPaint = Paint()..color = color;
+      for (var i = 0; i < count; i++) {
+        canvas.drawCircle(Offset(xAt(i), yAt(values[i])), strokeWidth + 1, dotPaint);
+      }
+    }
+
+    drawSeries(groupValues, AppColors.textSecondary, 2, false);
+    drawSeries(userValues, AppColors.yellow, 3.5, true);
+
+    for (var i = 0; i < labels.length; i++) {
+      final painter = TextPainter(
+        text: TextSpan(
+          text: labels[i],
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      painter.paint(
+        canvas,
+        Offset(xAt(i) - painter.width / 2, size.height - bottomPad + 8),
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _EvolutionChartPainter oldDelegate) => true;
+}
+
+// -----------------------------------------------------------------------------
+// TIENDA
+// -----------------------------------------------------------------------------
+
+class StoreScreen extends StatefulWidget {
+  const StoreScreen({super.key});
+
+  @override
+  State<StoreScreen> createState() => _StoreScreenState();
+}
+
+class _StoreScreenState extends State<StoreScreen> {
+  int _tab = 0;
+
+  Future<void> _buy(StoreItem item) async {
+    final state = AppScope.read(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        title: const Text('Confirmar compra', style: AppText.heading),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(item.name, style: AppText.title),
+            const SizedBox(height: 8),
+            Text(item.description, style: AppText.bodyMuted),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                const Icon(
+                  Icons.monetization_on_rounded,
+                  color: AppColors.yellow,
+                  size: 20,
+                ),
+                const SizedBox(width: 6),
+                Text('${item.price} monedas', style: AppText.heading),
+              ],
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            style: FilledButton.styleFrom(minimumSize: const Size(110, 44)),
+            child: const Text('Comprar'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    final result = state.purchase(item);
+    final message = switch (result) {
+      PurchaseResult.success => '¡Listo! Compraste ${item.name}.',
+      PurchaseResult.insufficientCoins =>
+        'No te alcanzan las monedas para ${item.name}.',
+      PurchaseResult.alreadyOwned => 'Ya tienes ${item.name}.',
+    };
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final state = AppScope.of(context);
+
+    if (state.socialLoading) {
+      return const LoadingView(label: 'Abriendo la tienda...');
+    }
+    final error = state.socialError;
+    if (error != null) {
+      return ErrorStateView(message: error, onRetry: () => state.loadSocial());
+    }
+    if (state.storeItems.isEmpty) {
+      return const EmptyStateView(
+        icon: Icons.storefront_rounded,
+        title: 'La tienda está vacía',
+        message: 'Muy pronto habrá ventajas y recompensas para canjear.',
+      );
+    }
+
+    final coins = state.user.coins;
+    final kind = _tab == 0 ? StoreItemKind.advantage : StoreItemKind.reward;
+    final shown = state.storeItems.where((item) => item.kind == kind).toList();
+    final owned = state.storeItems
+        .where((item) => state.ownedCount(item.id) > 0)
+        .toList();
+
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+      children: [
+        _CoinsCard(coins: coins),
+        const SizedBox(height: 12),
+        const CCCard(
+          child: Row(
+            children: [
+              Icon(Icons.military_tech_rounded, color: AppColors.yellow, size: 28),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Las insignias no se compran: se consiguen con logros dentro del bonche.',
+                  style: AppText.bodyMuted,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+        SegmentedTabs(
+          labels: const ['Ventajas', 'Recompensas'],
+          selected: _tab,
+          onChanged: (i) => setState(() => _tab = i),
+        ),
+        const SizedBox(height: 16),
+        for (final item in shown)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _StoreItemCard(
+              item: item,
+              owned: state.ownedCount(item.id),
+              coins: coins,
+              onBuy: () => _buy(item),
+            ),
+          ),
+        if (owned.isNotEmpty) ...[
+          const SizedBox(height: 16),
+          const SectionTitle('Tu mochila'),
+          CCCard(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            child: Column(
+              children: [
+                for (var i = 0; i < owned.length; i++) ...[
+                  _InventoryRow(
+                    item: owned[i],
+                    count: state.ownedCount(owned[i].id),
+                  ),
+                  if (i != owned.length - 1)
+                    const Divider(height: 1, color: AppColors.border),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _CoinsCard extends StatelessWidget {
+  const _CoinsCard({required this.coins});
+
+  final int coins;
+
+  @override
+  Widget build(BuildContext context) {
+    return CCCard(
+      highlight: true,
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: AppColors.yellow,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Icon(
+              Icons.monetization_on_rounded,
+              color: AppColors.onYellow,
+              size: 34,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('TUS MONEDAS', style: AppText.label),
+                const SizedBox(height: 2),
+                Text('$coins', style: AppText.display),
+                const SizedBox(height: 2),
+                const Text(
+                  'Las ganas completando retos.',
+                  style: AppText.bodyMuted,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StoreItemCard extends StatelessWidget {
+  const _StoreItemCard({
+    required this.item,
+    required this.owned,
+    required this.coins,
+    required this.onBuy,
+  });
+
+  final StoreItem item;
+  final int owned;
+  final int coins;
+  final VoidCallback onBuy;
+
+  @override
+  Widget build(BuildContext context) {
+    final soldOut = item.oneTime && owned > 0;
+    final canAfford = coins >= item.price;
+
+    final String buttonLabel;
+    if (soldOut) {
+      buttonLabel = 'Adquirido';
+    } else if (!canAfford) {
+      buttonLabel = 'Te faltan ${item.price - coins}';
+    } else {
+      buttonLabel = 'Comprar';
+    }
+
+    return CCCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: AppColors.yellowSoft,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(item.icon, color: AppColors.yellow, size: 28),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        Text(item.name, style: AppText.heading),
+                        if (owned > 0 && !item.oneTime)
+                          InfoPill(label: 'Tienes $owned', color: AppColors.success),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(item.description, style: AppText.bodyMuted),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              const Icon(
+                Icons.monetization_on_rounded,
+                color: AppColors.yellow,
+                size: 22,
+              ),
+              const SizedBox(width: 6),
+              Text('${item.price}', style: AppText.title),
+              const Spacer(),
+              FilledButton(
+                onPressed: (soldOut || !canAfford) ? null : onBuy,
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(128, 46),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                ),
+                child: Text(buttonLabel),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InventoryRow extends StatelessWidget {
+  const _InventoryRow({required this.item, required this.count});
+
+  final StoreItem item;
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.yellowSoft,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(item.icon, color: AppColors.yellow, size: 22),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(item.name, style: AppText.body.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 2),
+                Text(
+                  item.appliesAutomatically
+                      ? 'Se aplica sola en tu próximo reto'
+                      : 'Guardada en tu mochila',
+                  style: AppText.bodyMuted,
+                ),
+              ],
+            ),
+          ),
+          Text('x$count', style: AppText.heading),
+        ],
+      ),
+    );
+  }
+}
