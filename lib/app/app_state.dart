@@ -351,6 +351,43 @@ class AppState extends ChangeNotifier {
 
   // ----------------------------------------------- bonche, ranking y tienda
 
+    /// Crea un bonche real en el servidor. Devuelve un mensaje de error o null.
+  Future<String?> createGroup({
+    required String name,
+    String description = '',
+  }) async {
+    final me = _user;
+    if (me == null) return 'Inicia sesión primero.';
+    try {
+      await groupService.createGroup(
+        name: name,
+        description: description,
+        leaderId: me.id,
+      );
+      await loadSocial();
+      return _group == null
+          ? 'No pudimos cargar tu bonche. Inténtalo de nuevo.'
+          : null;
+    } catch (e) {
+      return e.toString().replaceFirst('Exception: ', '');
+    }
+  }
+
+  /// Une al usuario a un bonche con su código. Devuelve un error o null.
+  Future<String?> joinGroup(String inviteCode) async {
+    final me = _user;
+    if (me == null) return 'Inicia sesión primero.';
+    try {
+      await groupService.joinGroup(inviteCode: inviteCode, userId: me.id);
+      await loadSocial();
+      return _group == null
+          ? 'No pudimos cargar tu bonche. Inténtalo de nuevo.'
+          : null;
+    } catch (e) {
+      return e.toString().replaceFirst('Exception: ', '');
+    }
+  }
+
   Future<void> loadSocial() async {
     _socialLoading = true;
     _socialError = null;
@@ -358,7 +395,7 @@ class AppState extends ChangeNotifier {
     try {
       final now = DateTime.now();
       final (group, messages, weekly, monthly, items) = await (
-        groupService.fetchGroup(),
+        groupService.fetchGroup(_user?.id ?? ''),
         chatService.fetchMessages(),
         rankingService.fetchBoard(RankingPeriod.weekly, now),
         rankingService.fetchBoard(RankingPeriod.monthly, now),

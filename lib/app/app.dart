@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../navigation/app_router.dart';
 import '../navigation/app_routes.dart';
+import '../services/api_auth_service.dart';
+import '../services/api_challenge_service.dart';
+import '../services/api_group_service.dart';
+import '../services/api_social_services.dart';
 import '../services/services.dart';
 import '../theme/theme.dart';
 import 'app_scope.dart';
@@ -19,14 +23,14 @@ class ChallengeUsApp extends StatefulWidget {
 
 class _ChallengeUsAppState extends State<ChallengeUsApp> {
   late final AppState _appState = AppState(
-    authService: const MockAuthService(),
-    challengeService: const MockChallengeService(),
+    authService: const ApiAuthService(),
+    challengeService: const ApiChallengeService(),
     validationService: const MockEvidenceValidationService(),
     permissionService: const SystemPermissionService(),
-    groupService: const MockGroupService(),
-    rankingService: const MockRankingService(),
-    chatService: const MockChatService(),
-    storeService: const MockStoreService(),
+    groupService: const ApiGroupService(),
+    rankingService: const ApiRankingService(),
+    chatService: const ApiChatService(),
+    storeService: const ApiStoreService(),
   );
 
   @override

@@ -8,12 +8,20 @@ import '../../widgets/widgets.dart';
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
+    void _enter(BuildContext context) {
+    final app = AppScope.read(context);
+    final goMain = app.group != null || app.socialError != null;
+    Navigator.of(context).pushReplacementNamed(
+      goMain ? AppRoutes.main : AppRoutes.boncheSetup,
+    );
+  }
+
   Future<void> _loginWithGoogle(BuildContext context) async {
     final app = AppScope.read(context);
     final ok = await app.signInWithGoogle();
     if (!context.mounted) return;
     if (ok) {
-      Navigator.of(context).pushReplacementNamed(AppRoutes.main);
+      _enter(context);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(app.authError ?? 'No pudimos iniciar sesión.')),
@@ -32,7 +40,7 @@ class WelcomeScreen extends StatelessWidget {
       builder: (_) => const _EmailSheet(),
     );
     if (ok == true && context.mounted) {
-      Navigator.of(context).pushReplacementNamed(AppRoutes.main);
+      _enter(context);
     }
   }
 

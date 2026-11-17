@@ -7,4 +7,5 @@ class AppRoutes {
   static const String evidenceCapture = '/evidence';
   static const String reward = '/reward';
   static const String profile = '/profile';
+  static const String boncheSetup = '/bonche-setup';
 }
