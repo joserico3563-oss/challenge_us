@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../app/app_scope.dart';
 import '../../models/models.dart';
+import '../../navigation/app_routes.dart';
 import '../../theme/theme.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/widgets.dart';
@@ -45,6 +46,17 @@ class BoncheScreen extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         _InviteCodeCard(code: group.inviteCode),
+        if (state.isLeader) ...[
+          const SizedBox(height: 12),
+          SecondaryButton(
+            label: 'Editar bonche y retos',
+            icon: Icons.edit_rounded,
+            onPressed: () => Navigator.of(context).pushNamed(
+              AppRoutes.boncheConfig,
+              arguments: false,
+            ),
+          ),
+        ],
         const SizedBox(height: 28),
         const SectionTitle('Integrantes'),
         _MembersCard(
@@ -348,33 +360,6 @@ class _ChallengeSettings extends StatelessWidget {
             ],
           ),
         ),
-        const SizedBox(height: 12),
-        CCCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('CATEGORÍAS', style: AppText.label),
-              const SizedBox(height: 12),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (final category in group.categories)
-                    InfoPill(
-                      label: category.label,
-                      icon: category.icon,
-                      color: AppColors.yellow,
-                    ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Solo el líder puede cambiar horarios y categorías.',
-                style: AppText.bodyMuted,
-              ),
-            ],
-          ),
-        ),
       ],
     );
   }
@@ -413,7 +398,7 @@ class _ScheduleRow extends StatelessWidget {
                 children: [
                   Text(schedule.label, style: AppText.heading),
                   Text(
-                    '${schedule.availableMembers}/$totalMembers disponibles',
+                    'Todos los días',
                     style: AppText.label,
                   ),
                 ],

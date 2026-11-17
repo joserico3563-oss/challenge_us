@@ -16,6 +16,16 @@ abstract class GroupService {
     required String inviteCode,
     required String userId,
   });
+
+  Future<void> updateGroup({
+    required String groupId,
+    required String userId,
+    required String name,
+    required int challengesPerDay,
+    required int windowMinutes,
+    required List<String> times,
+    required int tzOffsetMinutes,
+  });
 }
 
 class MockGroupService implements GroupService {
@@ -42,5 +52,18 @@ class MockGroupService implements GroupService {
     required String userId,
   }) {
     throw UnsupportedError('El servicio mock no une a bonches.');
+  }
+
+  @override
+  Future<void> updateGroup({
+    required String groupId,
+    required String userId,
+    required String name,
+    required int challengesPerDay,
+    required int windowMinutes,
+    required List<String> times,
+    required int tzOffsetMinutes,
+  }) {
+    throw UnsupportedError('El servicio mock no edita bonches.');
   }
 }

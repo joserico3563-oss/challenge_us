@@ -53,6 +53,8 @@ class GroupInfo {
   const GroupInfo({
     required this.name,
     required this.tagline,
+    this.id = '',
+    this.configured = true,
     required this.createdAt,
     required this.leaderId,
     required this.inviteCode,
@@ -65,6 +67,8 @@ class GroupInfo {
 
   final String name;
   final String tagline;
+  final String id;
+  final bool configured;
   final DateTime createdAt;
   final String leaderId;
   final String inviteCode;

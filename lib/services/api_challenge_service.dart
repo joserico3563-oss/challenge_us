@@ -3,8 +3,7 @@ import '../models/models.dart';
 import 'api_service.dart';
 import 'challenge_service.dart';
 
-/// Retos reales del día (GET /api/challenges/today) convertidos al modelo
-/// que usan las pantallas. Lo que la API no envía se completa con valores por defecto.
+/// Retos del dia del bonche (GET /api/bonches/{id}/challenges/today).
 class ApiChallengeService implements ChallengeService {
   const ApiChallengeService();
 
@@ -14,8 +13,9 @@ class ApiChallengeService implements ChallengeService {
   ];
 
   @override
-  Future<List<Challenge>> fetchTodayChallenges() async {
-    final items = await ApiService.getChallengesToday();
+  Future<List<Challenge>> fetchTodayChallenges(String boncheId) async {
+    if (boncheId.isEmpty) return const <Challenge>[];
+    final items = await ApiService.getBoncheChallenges(boncheId);
     final now = DateTime.now();
     return [for (final item in items) _toChallenge(item, now)];
   }

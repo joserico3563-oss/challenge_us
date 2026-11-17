@@ -112,6 +112,49 @@ class ApiService {
     }
   }
 
+    static Future<Map<String, dynamic>> updateBonche({
+    required String boncheId,
+    required String userId,
+    required String name,
+    required int challengesPerDay,
+    required int windowMinutes,
+    required List<String> times,
+    required int tzOffset,
+  }) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/api/bonches/$boncheId/config'),
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({
+        "user_id": userId,
+        "name": name,
+        "challenges_per_day": challengesPerDay,
+        "window_minutes": windowMinutes,
+        "times": times,
+        "tz_offset": tzOffset,
+      }),
+    ).timeout(const Duration(seconds: 60));
+
+    final body = jsonDecode(utf8.decode(response.bodyBytes));
+    if (response.statusCode == 200) {
+      return body as Map<String, dynamic>;
+    }
+    final detail = body is Map ? body['detail'] : null;
+    throw Exception(detail is String ? detail : 'Error al guardar la configuración');
+  }
+
+  static Future<List<ChallengeModel>> getBoncheChallenges(String boncheId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/api/bonches/$boncheId/challenges/today'),
+    ).timeout(const Duration(seconds: 60));
+
+    if (response.statusCode == 200) {
+      final List<dynamic> list = jsonDecode(utf8.decode(response.bodyBytes));
+      return list.map((model) => ChallengeModel.fromJson(model)).toList();
+    } else {
+      throw Exception('Error al cargar los retos del bonche');
+    }
+  }
+
   static Future<List<UserModel>> getRanking() async {
     final response = await http.get(
       Uri.parse('$baseUrl/api/ranking'),

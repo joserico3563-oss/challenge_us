@@ -1,8 +1,9 @@
+import '../models/bonche_model.dart';
 import '../models/models.dart';
 import 'api_service.dart';
 import 'group_service.dart';
 
-/// Bonche real: se crea, se une y se consulta en la API de Render.
+/// Bonche real: se crea, se une, se configura y se consulta en la API.
 class ApiGroupService implements GroupService {
   const ApiGroupService();
 
@@ -13,6 +14,8 @@ class ApiGroupService implements GroupService {
     if (bonches.isEmpty) return null;
     final b = bonches.first;
     return GroupInfo(
+      id: b.id,
+      configured: b.configured,
       name: b.name,
       tagline: b.description.isEmpty
           ? 'Retos, risas y parche todos los días'
@@ -21,9 +24,9 @@ class ApiGroupService implements GroupService {
           DateTime.tryParse(b.createdAt ?? '')?.toLocal() ?? DateTime.now(),
       leaderId: b.leaderId,
       inviteCode: b.inviteCode,
-      dailyChallenges: 0,
-      windowMinutes: 0,
-      schedules: const [],
+      dailyChallenges: b.configured ? b.challengesPerDay : 0,
+      windowMinutes: b.configured ? b.windowMinutes : 0,
+      schedules: b.configured ? _schedules(b) : const <GroupSchedule>[],
       categories: const [],
       members: [
         for (final m in b.members)
@@ -35,6 +38,29 @@ class ApiGroupService implements GroupService {
           ),
       ],
     );
+  }
+
+  /// Las horas se guardan en la zona del lider; aqui se pasan a la del telefono.
+  static List<GroupSchedule> _schedules(BoncheModel b) {
+    final deviceOffset = DateTime.now().timeZoneOffset.inMinutes;
+    final result = <GroupSchedule>[];
+    for (final raw in b.times) {
+      final parts = raw.split(':');
+      if (parts.length != 2) continue;
+      final h = int.tryParse(parts[0]);
+      final m = int.tryParse(parts[1]);
+      if (h == null || m == null) continue;
+      var total = h * 60 + m - b.tzOffset + deviceOffset;
+      total = ((total % 1440) + 1440) % 1440;
+      result.add(
+        GroupSchedule(
+          hour: total ~/ 60,
+          minute: total % 60,
+          availableMembers: b.members.length,
+        ),
+      );
+    }
+    return result;
   }
 
   @override
@@ -58,6 +84,27 @@ class ApiGroupService implements GroupService {
     await ApiService.joinBonche(
       inviteCode: inviteCode.trim().toUpperCase(),
       usuarioId: userId,
+    );
+  }
+
+  @override
+  Future<void> updateGroup({
+    required String groupId,
+    required String userId,
+    required String name,
+    required int challengesPerDay,
+    required int windowMinutes,
+    required List<String> times,
+    required int tzOffsetMinutes,
+  }) async {
+    await ApiService.updateBonche(
+      boncheId: groupId,
+      userId: userId,
+      name: name,
+      challengesPerDay: challengesPerDay,
+      windowMinutes: windowMinutes,
+      times: times,
+      tzOffset: tzOffsetMinutes,
     );
   }
 }

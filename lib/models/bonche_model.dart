@@ -32,6 +32,11 @@ class BoncheModel {
   final String leaderId;
   final String? createdAt;
   final List<BoncheMemberModel> members;
+  final int challengesPerDay;
+  final int windowMinutes;
+  final List<String> times;
+  final int tzOffset;
+  final bool configured;
 
   const BoncheModel({
     required this.id,
@@ -41,12 +46,18 @@ class BoncheModel {
     required this.leaderId,
     required this.createdAt,
     required this.members,
+    required this.challengesPerDay,
+    required this.windowMinutes,
+    required this.times,
+    required this.tzOffset,
+    required this.configured,
   });
 
   int get totalMembers => members.length;
 
   factory BoncheModel.fromJson(Map<String, dynamic> json) {
-    final raw = json['members'];
+    final rawMembers = json['members'];
+    final rawTimes = json['times'];
     return BoncheModel(
       id: (json['id'] ?? '').toString(),
       name: (json['name'] ?? '').toString(),
@@ -54,11 +65,18 @@ class BoncheModel {
       inviteCode: (json['inviteCode'] ?? '').toString(),
       leaderId: (json['leaderId'] ?? '').toString(),
       createdAt: json['createdAt']?.toString(),
-      members: raw is List
-          ? raw
+      members: rawMembers is List
+          ? rawMembers
               .map((m) => BoncheMemberModel.fromJson(m as Map<String, dynamic>))
               .toList()
           : const <BoncheMemberModel>[],
+      challengesPerDay: (json['challengesPerDay'] as num?)?.toInt() ?? 3,
+      windowMinutes: (json['windowMinutes'] as num?)?.toInt() ?? 90,
+      times: rawTimes is List
+          ? rawTimes.map((t) => t.toString()).toList()
+          : const <String>[],
+      tzOffset: (json['tzOffset'] as num?)?.toInt() ?? -300,
+      configured: json['configured'] == true,
     );
   }
 }

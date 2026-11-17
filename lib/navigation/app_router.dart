@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/models.dart';
+import '../screens/bonche/bonche_config_screen.dart';
 import '../screens/bonche/bonche_setup_screen.dart';
 import '../screens/challenge/challenge_detail_screen.dart';
 import '../screens/evidence/evidence_capture_screen.dart';
@@ -23,6 +24,9 @@ class AppRouter {
     }
     if (name == AppRoutes.main) {
       return _page(settings, const MainShell());
+    }
+    if (name == AppRoutes.boncheConfig) {
+      return _page(settings, BoncheConfigScreen(isSetup: args == true));
     }
     if (name == AppRoutes.boncheSetup) {
       return _page(settings, const BoncheSetupScreen());

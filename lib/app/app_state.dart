@@ -64,6 +64,9 @@ class AppState extends ChangeNotifier {
   String? get authError => _authError;
 
   GroupInfo? get group => _group;
+
+  bool get isLeader =>
+      _group != null && _user != null && _group!.leaderId == _user!.id;
   List<ChatMessage> get messages => _messages;
   List<StoreItem> get storeItems => _storeItems;
   bool get socialLoading => _socialLoading;
@@ -109,6 +112,23 @@ class AppState extends ChangeNotifier {
       }
     }
     return _challenges.first;
+  }
+
+    /// Proximo reto segun los horarios del bonche (hora del dispositivo).
+  DateTime? nextChallengeStart(DateTime now) {
+    final current = _group;
+    if (current == null || !current.configured || current.schedules.isEmpty) {
+      return null;
+    }
+    DateTime? best;
+    for (final s in current.schedules) {
+      var candidate = DateTime(now.year, now.month, now.day, s.hour, s.minute);
+      if (!candidate.isAfter(now)) {
+        candidate = candidate.add(const Duration(days: 1));
+      }
+      if (best == null || candidate.isBefore(best)) best = candidate;
+    }
+    return best;
   }
 
   List<Challenge> otherChallenges(DateTime now) {
@@ -202,7 +222,7 @@ class AppState extends ChangeNotifier {
     try {
       _user = await action();
       _resetSession();
-      await Future.wait<void>([loadChallenges(), loadSocial()]);
+      await loadSocial();
       return true;
     } catch (_) {
       _user = null;
@@ -249,7 +269,7 @@ class AppState extends ChangeNotifier {
     _challengesError = null;
     _notify();
     try {
-      _challenges = await challengeService.fetchTodayChallenges();
+      _challenges = await challengeService.fetchTodayChallenges(_group?.id ?? '');
     } catch (_) {
       _challengesError = 'No pudimos cargar los retos de hoy.';
     } finally {
@@ -388,6 +408,33 @@ class AppState extends ChangeNotifier {
     }
   }
 
+    /// Guarda nombre, cantidad, horas y duracion de los retos (solo el lider).
+  Future<String?> saveGroupConfig({
+    required String name,
+    required int challengesPerDay,
+    required int windowMinutes,
+    required List<String> times,
+  }) async {
+    final me = _user;
+    final current = _group;
+    if (me == null || current == null) return 'No encontramos tu bonche.';
+    try {
+      await groupService.updateGroup(
+        groupId: current.id,
+        userId: me.id,
+        name: name,
+        challengesPerDay: challengesPerDay,
+        windowMinutes: windowMinutes,
+        times: times,
+        tzOffsetMinutes: DateTime.now().timeZoneOffset.inMinutes,
+      );
+      await loadSocial();
+      return null;
+    } catch (e) {
+      return e.toString().replaceFirst('Exception: ', '');
+    }
+  }
+
   Future<void> loadSocial() async {
     _socialLoading = true;
     _socialError = null;
@@ -406,6 +453,7 @@ class AppState extends ChangeNotifier {
       _weeklyBoard = weekly;
       _monthlyBoard = monthly;
       _storeItems = items;
+      await loadChallenges();
     } catch (_) {
       _socialError =
           'No pudimos cargar tu bonche. Revisa tu conexión e inténtalo de nuevo.';

@@ -8,4 +8,5 @@ class AppRoutes {
   static const String reward = '/reward';
   static const String profile = '/profile';
   static const String boncheSetup = '/bonche-setup';
+  static const String boncheConfig = '/bonche-config';
 }

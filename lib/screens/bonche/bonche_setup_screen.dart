@@ -71,10 +71,19 @@ class _BoncheSetupScreenState extends State<BoncheSetupScreen> {
       _busy = false;
       if (error == null) {
         _step = _Step.created;
+        WidgetsBinding.instance.addPostFrameCallback((_) => _openConfig());
       } else {
         _error = error;
       }
     });
+  }
+
+    Future<void> _openConfig() async {
+    if (!mounted) return;
+    await Navigator.of(context).pushNamed(
+      AppRoutes.boncheConfig,
+      arguments: true,
+    );
   }
 
   Future<void> _join() async {
