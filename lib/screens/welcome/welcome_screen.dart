@@ -8,40 +8,29 @@ import '../../widgets/widgets.dart';
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
-    void _enter(BuildContext context) {
+  /// Tras entrar: al inicio si ya tiene bonche; si no, a crear o unirse.
+  void _enter(BuildContext context) {
     final app = AppScope.read(context);
-    final goMain = app.group != null || app.socialError != null;
     Navigator.of(context).pushReplacementNamed(
-      goMain ? AppRoutes.main : AppRoutes.boncheSetup,
+      app.group != null ? AppRoutes.main : AppRoutes.boncheSetup,
     );
   }
 
-  Future<void> _loginWithGoogle(BuildContext context) async {
-    final app = AppScope.read(context);
-    final ok = await app.signInWithGoogle();
-    if (!context.mounted) return;
-    if (ok) {
-      _enter(context);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(app.authError ?? 'No pudimos iniciar sesión.')),
-      );
-    }
-  }
-
-  Future<void> _openEmailSheet(BuildContext context) async {
-    final ok = await showModalBottomSheet<bool>(
+  void _openEmailSheet(BuildContext context) {
+    // La hoja se cierra con `true` cuando el usuario entra o crea su cuenta.
+    showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (_) => const _EmailSheet(),
-    );
-    if (ok == true && context.mounted) {
-      _enter(context);
-    }
+      builder: (context) => const _EmailSheet(),
+    ).then((success) {
+      if (success == true && context.mounted) {
+        _enter(context);
+      }
+    });
   }
 
   @override
@@ -50,43 +39,61 @@ class WelcomeScreen extends StatelessWidget {
 
     return Scaffold(
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const AppLogo(size: 88, vertical: true),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Pequeños retos. Grandes bonches.',
-                    textAlign: TextAlign.center,
-                    style: AppText.heading,
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Retos diarios entre amigos. Compite sano, ríe y gana con tu parche.',
-                    textAlign: TextAlign.center,
-                    style: AppText.bodyMuted,
-                  ),
-                  const SizedBox(height: 40),
-                  PrimaryButton(
-                    label: 'Continuar con Google',
-                    icon: Icons.login_rounded,
-                    loading: busy,
-                    onPressed: () => _loginWithGoogle(context),
-                  ),
-                  const SizedBox(height: 12),
-                  SecondaryButton(
-                    label: 'Continuar con correo',
-                    icon: Icons.mail_outline_rounded,
-                    onPressed: busy ? null : () => _openEmailSheet(context),
-                  ),
-                ],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Spacer(),
+              Container(
+                width: 90,
+                height: 90,
+                decoration: BoxDecoration(
+                  color: AppColors.yellow,
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: const Icon(
+                  Icons.bolt_rounded,
+                  size: 54,
+                  color: AppColors.surface,
+                ),
               ),
-            ),
+              const SizedBox(height: 24),
+              const Text.rich(
+                TextSpan(
+                  style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                  children: [
+                    TextSpan(text: 'La '),
+                    TextSpan(
+                      text: 'Recocha',
+                      style: TextStyle(color: AppColors.yellow),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Pequeños retos. Grandes bonches.',
+                style: AppText.heading,
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'Retos diarios entre amigos. Compite sano, ríe y gana con tu parche.',
+                textAlign: TextAlign.center,
+                style: AppText.bodyMuted,
+              ),
+              const Spacer(),
+              PrimaryButton(
+                label: 'Continuar con correo',
+                icon: Icons.mail_outline_rounded,
+                loading: busy,
+                onPressed: () => _openEmailSheet(context),
+              ),
+            ],
           ),
         ),
       ),
@@ -103,8 +110,10 @@ class _EmailSheet extends StatefulWidget {
 
 class _EmailSheetState extends State<_EmailSheet> {
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _register = false;
   bool _hidePassword = true;
   bool _busy = false;
   String? _error;
@@ -113,6 +122,7 @@ class _EmailSheetState extends State<_EmailSheet> {
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -125,10 +135,19 @@ class _EmailSheetState extends State<_EmailSheet> {
       _busy = true;
       _error = null;
     });
-    final ok = await app.signInWithEmail(
-      email: _emailController.text,
-      password: _passwordController.text,
-    );
+
+    final email = _emailController.text.trim();
+    final ok = _register
+        ? await app.registerWithEmail(
+            email: email,
+            password: _passwordController.text,
+            displayName: _nameController.text.trim(),
+          )
+        : await app.signInWithEmail(
+            email: email,
+            password: _passwordController.text,
+          );
+
     if (!mounted) return;
     if (ok) {
       Navigator.of(context).pop(true);
@@ -143,7 +162,6 @@ class _EmailSheetState extends State<_EmailSheet> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
-
     return SingleChildScrollView(
       padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + bottomInset),
       child: Form(
@@ -152,10 +170,34 @@ class _EmailSheetState extends State<_EmailSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Entra con tu correo', style: AppText.title),
+            Text(
+              _register ? 'Crea tu cuenta' : 'Entra con tu correo',
+              style: AppText.title,
+            ),
             const SizedBox(height: 6),
-            const Text('Usa tu correo y una contraseña.', style: AppText.bodyMuted),
+            Text(
+              _register
+                  ? 'Elige tu nombre, tu correo y una contraseña.'
+                  : 'Usa tu correo y tu contraseña.',
+              style: AppText.bodyMuted,
+            ),
             const SizedBox(height: 20),
+            if (_register) ...[
+              TextFormField(
+                controller: _nameController,
+                textInputAction: TextInputAction.next,
+                textCapitalization: TextCapitalization.words,
+                decoration: ccInputDecoration(
+                  label: 'Tu nombre',
+                  icon: Icons.person_outline_rounded,
+                ),
+                validator: (value) {
+                  if ((value ?? '').trim().length < 2) return 'Escribe tu nombre';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 14),
+            ],
             TextFormField(
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
@@ -201,9 +243,25 @@ class _EmailSheetState extends State<_EmailSheet> {
             ],
             const SizedBox(height: 22),
             PrimaryButton(
-              label: 'Entrar',
+              label: _register ? 'Crear cuenta' : 'Entrar',
               loading: _busy,
               onPressed: _submit,
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: TextButton(
+                onPressed: _busy
+                    ? null
+                    : () => setState(() {
+                          _register = !_register;
+                          _error = null;
+                        }),
+                child: Text(
+                  _register
+                      ? '¿Ya tienes cuenta? Entra'
+                      : '¿Primera vez? Crea tu cuenta',
+                ),
+              ),
             ),
           ],
         ),

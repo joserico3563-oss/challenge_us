@@ -44,7 +44,7 @@ class _ChallengeUsAppState extends State<ChallengeUsApp> {
     return AppScope(
       state: _appState,
       child: MaterialApp(
-        title: 'ChallengeUs',
+        title: 'La Recocha',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.dark,
         darkTheme: AppTheme.dark,

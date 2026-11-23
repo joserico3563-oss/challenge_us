@@ -9,6 +9,12 @@ abstract class AuthService {
     required String password,
   });
 
+  Future<UserProfile> registerWithEmail({
+    required String email,
+    required String password,
+    required String displayName,
+  });
+
   Future<void> signOut();
 }
 
@@ -31,6 +37,16 @@ class MockAuthService implements AuthService {
   }) async {
     await Future<void>.delayed(const Duration(milliseconds: 700));
     return MockData.userFor(email: email.trim());
+  }
+
+  @override
+  Future<UserProfile> registerWithEmail({
+    required String email,
+    required String password,
+    required String displayName,
+  }) async {
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+    return MockData.userFor(email: email.trim(), displayName: displayName.trim());
   }
 
   @override

@@ -285,7 +285,7 @@ class _BoncheSetupScreenState extends State<BoncheSetupScreen> {
     final code = group?.inviteCode ?? '';
     final name = group?.name ?? 'tu bonche';
     final invitation =
-        'Únete a mi bonche "$name" en ChallengeUs con el código $code';
+        'Únete a mi bonche "$name" en La Recocha con el código $code';
 
     return Column(
       mainAxisSize: MainAxisSize.min,

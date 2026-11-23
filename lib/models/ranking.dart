@@ -7,6 +7,7 @@ class RankingEntry {
     required this.completed,
     required this.wins,
     required this.previousRank,
+    this.name = '',
   });
 
   final String memberId;
@@ -15,6 +16,10 @@ class RankingEntry {
   final int wins;
   final int previousRank;
 
+  /// Nombre mostrado. Queda vacío cuando el integrante se resuelve por el
+  /// bonche ([AppState.memberById]); el ranking global sí lo trae.
+  final String name;
+
   RankingEntry copyWith({int? points, int? completed}) {
     return RankingEntry(
       memberId: memberId,
@@ -22,6 +27,7 @@ class RankingEntry {
       completed: completed ?? this.completed,
       wins: wins,
       previousRank: previousRank,
+      name: name,
     );
   }
 }

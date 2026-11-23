@@ -5,13 +5,13 @@ enum AppPermission {
   camera(
     label: 'cámara',
     rationale:
-        'ChallengeUs usa la cámara para que captures la evidencia de tus retos '
+        'La Recocha usa la cámara para que captures la evidencia de tus retos '
         'en el momento. No se usa la galería: cada evidencia se toma aquí mismo.',
   ),
   microphone(
     label: 'micrófono',
     rationale:
-        'ChallengeUs usa el micrófono solo dentro de los retos de voz, '
+        'La Recocha usa el micrófono solo dentro de los retos de voz, '
         'para grabar tu doblaje.',
   );
 

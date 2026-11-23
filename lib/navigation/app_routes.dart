@@ -9,4 +9,7 @@ class AppRoutes {
   static const String profile = '/profile';
   static const String boncheSetup = '/bonche-setup';
   static const String boncheConfig = '/bonche-config';
+  static const String vote = '/vote';
+  static const String notifications = '/notifications';
+  static const String badges = '/badges';
 }

@@ -38,6 +38,7 @@ class RewardResult {
     this.level = 1,
     this.levelTitle = '',
     this.doubleXpUsed = false,
+    this.pendingVote = false,
   });
 
   factory RewardResult.rejected({
@@ -61,4 +62,8 @@ class RewardResult {
   final int level;
   final String levelTitle;
   final bool doubleXpUsed;
+
+  /// La evidencia se envió y quedó registrada, pero la aprobación depende de la
+  /// votación del bonche: todavía no hay XP ni monedas que mostrar.
+  final bool pendingVote;
 }

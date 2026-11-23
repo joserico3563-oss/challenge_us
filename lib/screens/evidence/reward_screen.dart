@@ -48,18 +48,28 @@ class RewardScreen extends StatelessWidget {
                         width: 104,
                         height: 104,
                         decoration: BoxDecoration(
-                          color: AppColors.success.withValues(alpha: 0.16),
+                          color: (result.pendingVote
+                                  ? AppColors.yellow
+                                  : AppColors.success)
+                              .withValues(alpha: 0.16),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(
-                          Icons.check_circle_rounded,
+                        child: Icon(
+                          result.pendingVote
+                              ? Icons.hourglass_top_rounded
+                              : Icons.check_circle_rounded,
                           size: 64,
-                          color: AppColors.success,
+                          color: result.pendingVote
+                              ? AppColors.yellow
+                              : AppColors.success,
                         ),
                       ),
                     ),
                     const SizedBox(height: 24),
-                    const Text('¡Reto completado!', style: AppText.display),
+                    Text(
+                      result.pendingVote ? '¡Evidencia enviada!' : '¡Reto completado!',
+                      style: AppText.display,
+                    ),
                     const SizedBox(height: 8),
                     Text(
                       result.challengeTitle,
@@ -67,7 +77,12 @@ class RewardScreen extends StatelessWidget {
                       style: AppText.bodyMuted,
                     ),
                     const SizedBox(height: 28),
-                    Row(
+                    if (result.pendingVote)
+                      CCCard(
+                        child: Text(result.message, style: AppText.bodyMuted),
+                      )
+                    else
+                      Row(
                       children: [
                         Expanded(
                           child: StatBox(
@@ -81,7 +96,7 @@ class RewardScreen extends StatelessWidget {
                           child: StatBox(
                             icon: Icons.monetization_on_rounded,
                             value: '+${result.coinsGained}',
-                            label: 'MONEDAS',
+                            label: 'BARRAS',
                           ),
                         ),
                         const SizedBox(width: 12),

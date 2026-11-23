@@ -7,7 +7,10 @@ import '../screens/challenge/challenge_detail_screen.dart';
 import '../screens/evidence/evidence_capture_screen.dart';
 import '../screens/evidence/reward_screen.dart';
 import '../screens/main/main_shell.dart';
+import '../screens/notifications/notifications_screen.dart';
+import '../screens/profile/badges_screen.dart';
 import '../screens/profile/profile_screen.dart';
+import '../screens/vote/vote_screen.dart';
 import '../screens/welcome/welcome_screen.dart';
 import '../widgets/widgets.dart';
 import 'app_routes.dart';
@@ -42,6 +45,15 @@ class AppRouter {
     }
     if (name == AppRoutes.reward && args is RewardResult) {
       return _page(settings, RewardScreen(result: args));
+    }
+    if (name == AppRoutes.vote) {
+      return _page(settings, const VoteScreen());
+    }
+    if (name == AppRoutes.notifications) {
+      return _page(settings, const NotificationsScreen());
+    }
+    if (name == AppRoutes.badges) {
+      return _page(settings, const BadgesScreen());
     }
     return _page(settings, const _RouteErrorScreen());
   }

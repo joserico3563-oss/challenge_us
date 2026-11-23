@@ -4,6 +4,7 @@ import '../../app/app_scope.dart';
 import '../../navigation/app_routes.dart';
 import '../../theme/theme.dart';
 import '../../widgets/widgets.dart';
+import 'badges_screen.dart';
 
 // -----------------------------------------------------------------------------
 // Perfil / Mi Muro (una sola pantalla; contenido completo en la Entrega 3)
@@ -69,7 +70,7 @@ class ProfileScreen extends StatelessWidget {
                 child: StatBox(
                   icon: Icons.monetization_on_rounded,
                   value: '${user.coins}',
-                  label: 'MONEDAS',
+                  label: 'BARRAS',
                 ),
               ),
               const SizedBox(width: 12),
@@ -93,20 +94,8 @@ class ProfileScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          const CCCard(
-            child: Row(
-              children: [
-                Icon(Icons.emoji_events_rounded, color: AppColors.yellow),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Muy pronto: tus insignias, estadísticas y logros en un solo muro.',
-                    style: AppText.bodyMuted,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          const SectionTitle('Insignias'),
+          const BadgesSummaryCard(),
           const SizedBox(height: 24),
           SecondaryButton(
             label: 'Cerrar sesión',

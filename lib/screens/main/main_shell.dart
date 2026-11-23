@@ -28,27 +28,14 @@ class _MainShellState extends State<MainShell> {
   }
 
   void _openNotifications() {
-    showModalBottomSheet<void>(
-      context: context,
-      backgroundColor: AppColors.surface,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (_) => const SizedBox(
-        height: 300,
-        child: EmptyStateView(
-          icon: Icons.notifications_none_rounded,
-          title: 'Sin notificaciones',
-          message:
-              'Aquí verás cuando salga un reto nuevo o tu bonche te escriba.',
-        ),
-      ),
-    );
+    Navigator.of(context).pushNamed(AppRoutes.notifications);
   }
 
   @override
   Widget build(BuildContext context) {
-    final user = AppScope.of(context).user;
+    final app = AppScope.of(context);
+    final user = app.user;
+    final unread = app.unreadNotifications;
 
     return PopScope(
       canPop: _index == 0,
@@ -67,7 +54,11 @@ class _MainShellState extends State<MainShell> {
             IconButton(
               tooltip: 'Notificaciones',
               onPressed: _openNotifications,
-              icon: const Icon(Icons.notifications_none_rounded),
+              icon: Badge(
+                isLabelVisible: unread > 0,
+                label: Text(unread > 99 ? '99+' : '$unread'),
+                child: const Icon(Icons.notifications_none_rounded),
+              ),
             ),
             Padding(
               padding: const EdgeInsets.only(left: 4, right: 16),

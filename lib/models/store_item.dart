@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 enum StoreItemKind { advantage, reward }
 
-enum PurchaseResult { success, insufficientCoins, alreadyOwned }
+enum PurchaseResult { success, insufficientCoins, alreadyOwned, failed }
 
 class StoreItem {
   const StoreItem({

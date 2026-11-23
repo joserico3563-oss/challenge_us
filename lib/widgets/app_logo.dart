@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/theme.dart';
 
-/// Logo de ChallengeUs dibujado en código (sin assets).
+/// Logo de La Recocha dibujado en código (sin assets).
 class AppLogo extends StatelessWidget {
   const AppLogo({
     super.key,
@@ -37,8 +37,8 @@ class AppLogo extends StatelessWidget {
           color: AppColors.textPrimary,
         ),
         children: const [
-          TextSpan(text: 'Challenge'),
-          TextSpan(text: 'Us', style: TextStyle(color: AppColors.yellow)),
+          TextSpan(text: 'La '),
+          TextSpan(text: 'Recocha', style: TextStyle(color: AppColors.yellow)),
         ],
       ),
     );

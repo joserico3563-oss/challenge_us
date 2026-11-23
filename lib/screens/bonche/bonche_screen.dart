@@ -58,6 +58,12 @@ class BoncheScreen extends StatelessWidget {
           ),
         ],
         const SizedBox(height: 28),
+        const SectionTitle('Calificar evidencias'),
+        _VotesCard(
+          count: state.pendingVotes.length,
+          onTap: () => Navigator.of(context).pushNamed(AppRoutes.vote),
+        ),
+        const SizedBox(height: 28),
         const SectionTitle('Integrantes'),
         _MembersCard(
           members: members,
@@ -413,6 +419,51 @@ class _ScheduleRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _VotesCard extends StatelessWidget {
+  const _VotesCard({required this.count, required this.onTap});
+
+  final int count;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final empty = count == 0;
+    final title = empty
+        ? 'Por el momento no hay ninguna evidencia o ya las calificaste todas.'
+        : (count == 1
+            ? 'Tienes 1 evidencia por calificar'
+            : 'Tienes $count evidencias por calificar');
+
+    return CCCard(
+      highlight: !empty,
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.how_to_vote_rounded, color: AppColors.yellow),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  title,
+                  style: empty ? AppText.bodyMuted : AppText.heading,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SecondaryButton(
+            label: 'Calificar evidencias',
+            icon: Icons.arrow_forward_rounded,
+            onPressed: onTap,
+          ),
+        ],
+      ),
     );
   }
 }

@@ -43,7 +43,7 @@ class _StoreScreenState extends State<StoreScreen> {
                   size: 20,
                 ),
                 const SizedBox(width: 6),
-                Text('${item.price} monedas', style: AppText.heading),
+                Text('${item.price} Barras', style: AppText.heading),
               ],
             ),
           ],
@@ -64,12 +64,15 @@ class _StoreScreenState extends State<StoreScreen> {
     );
     if (confirmed != true || !mounted) return;
 
-    final result = state.purchase(item);
+    final result = await state.purchase(item);
+    if (!mounted) return;
     final message = switch (result) {
       PurchaseResult.success => '¡Listo! Compraste ${item.name}.',
       PurchaseResult.insufficientCoins =>
-        'No te alcanzan las monedas para ${item.name}.',
+        'No te alcanzan las Barras para ${item.name}.',
       PurchaseResult.alreadyOwned => 'Ya tienes ${item.name}.',
+      PurchaseResult.failed =>
+        state.lastPurchaseError ?? 'No pudimos completar la compra.',
     };
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
   }
@@ -190,7 +193,7 @@ class _CoinsCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('TUS MONEDAS', style: AppText.label),
+                const Text('TUS BARRAS', style: AppText.label),
                 const SizedBox(height: 2),
                 Text('$coins', style: AppText.display),
                 const SizedBox(height: 2),

@@ -32,8 +32,9 @@ class ChallengeDetailScreen extends StatelessWidget {
 
         final status = state.statusOf(challenge, now);
         final canCapture = status == ChallengeStatus.available;
+        final retry = state.progressOf(challengeId)?.canRetry ?? false;
         final buttonLabel = switch (status) {
-          ChallengeStatus.available => 'Capturar evidencia',
+          ChallengeStatus.available => retry ? 'Segundo intento: capturar evidencia' : 'Capturar evidencia',
           ChallengeStatus.upcoming => 'Aún no empieza',
           ChallengeStatus.completed => 'Reto completado',
           ChallengeStatus.expired => 'Tiempo agotado',
@@ -94,17 +95,17 @@ class ChallengeDetailScreen extends StatelessWidget {
                 children: [
                   Expanded(
                     child: _InfoTile(
-                      icon: Icons.stars_rounded,
-                      label: 'PUNTUACIÓN',
-                      value: '${challenge.points} pts',
+                      icon: Icons.bolt_rounded,
+                      label: 'XP',
+                      value: '+${challenge.xpReward}',
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: _InfoTile(
-                      icon: Icons.card_giftcard_rounded,
-                      label: 'RECOMPENSA',
-                      value: '+${challenge.xpReward} XP\n+${challenge.coinReward} monedas',
+                      icon: Icons.monetization_on_rounded,
+                      label: 'BARRAS',
+                      value: '+${challenge.coinReward}',
                     ),
                   ),
                 ],

@@ -105,7 +105,7 @@ class _RankingScreenState extends State<RankingScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Llevas $myPoints puntos; el promedio del bonche es $groupAverage.',
+                'Llevas $myPoints XP en este per\u00edodo; el promedio del bonche es $groupAverage XP.',
                 style: AppText.bodyMuted,
               ),
             ],
@@ -198,7 +198,7 @@ class _Podium extends StatelessWidget {
             overflow: TextOverflow.ellipsis,
             style: AppText.body.copyWith(fontSize: 14, fontWeight: FontWeight.w700),
           ),
-          Text('${entry.points} pts', style: AppText.label),
+          Text('${entry.points} XP', style: AppText.label),
           const SizedBox(height: 8),
           Container(
             height: barHeight,
@@ -257,7 +257,7 @@ class _StandingsCard extends StatelessWidget {
                 ),
                 SizedBox(
                   width: 60,
-                  child: Text('PTS', textAlign: TextAlign.right, style: AppText.label),
+                  child: Text('XP', textAlign: TextAlign.right, style: AppText.label),
                 ),
               ],
             ),
@@ -291,7 +291,6 @@ class _StandingRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final delta = entry.previousRank - rank;
-    final winsText = '${entry.wins} ${entry.wins == 1 ? 'victoria' : 'victorias'}';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
@@ -324,7 +323,6 @@ class _StandingRow extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: AppText.body.copyWith(fontWeight: FontWeight.w700),
                 ),
-                Text(winsText, style: AppText.label.copyWith(fontSize: 11)),
               ],
             ),
           ),
@@ -396,67 +394,36 @@ class _MyStats extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final percent = totalChallenges == 0
-        ? 0
-        : ((entry.completed * 100) / totalChallenges).clamp(0, 100).round();
-
-    return Column(
+    return Row(
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: StatBox(
-                icon: Icons.leaderboard_rounded,
-                value: '#$rank',
-                label: 'PUESTO',
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: StatBox(
-                icon: Icons.stars_rounded,
-                value: '${entry.points}',
-                label: 'PUNTOS',
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: StatBox(
-                icon: Icons.check_circle_rounded,
-                color: AppColors.success,
-                value: '${entry.completed}',
-                label: 'RETOS',
-              ),
-            ),
-          ],
+        Expanded(
+          child: StatBox(
+            icon: Icons.leaderboard_rounded,
+            value: '#$rank',
+            label: 'PUESTO',
+          ),
         ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: StatBox(
-                icon: Icons.trending_up_rounded,
-                color: AppColors.success,
-                value: '$percent%',
-                label: 'CUMPLIMIENTO',
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: StatBox(
-                icon: Icons.emoji_events_rounded,
-                color: AppColors.orange,
-                value: '${entry.wins}',
-                label: 'VICTORIAS',
-              ),
-            ),
-          ],
+        const SizedBox(width: 12),
+        Expanded(
+          child: StatBox(
+            icon: Icons.bolt_rounded,
+            value: '${entry.points}',
+            label: 'XP',
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: StatBox(
+            icon: Icons.check_circle_rounded,
+            color: AppColors.success,
+            value: '${entry.completed}',
+            label: 'RETOS',
+          ),
         ),
       ],
     );
   }
 }
-
 class _LegendDot extends StatelessWidget {
   const _LegendDot({required this.color, required this.label});
 
@@ -489,6 +456,14 @@ class _HistoryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final items = board.history;
+    if (items.isEmpty) {
+      return const CCCard(
+        child: Text(
+          'Todav\u00eda no hay periodos cerrados con XP.',
+          style: AppText.bodyMuted,
+        ),
+      );
+    }
     return CCCard(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       child: Column(
@@ -551,7 +526,7 @@ class _HistoryRow extends StatelessWidget {
             children: [
               Text('Tú: ${entry.userRank}.º', style: AppText.body.copyWith(fontWeight: FontWeight.w700)),
               const SizedBox(height: 2),
-              Text('${entry.userPoints} pts', style: AppText.label),
+              Text('${entry.userPoints} XP', style: AppText.label),
             ],
           ),
         ],
