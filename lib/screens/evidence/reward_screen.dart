@@ -28,7 +28,7 @@ class RewardScreen extends StatelessWidget {
       onPopInvokedWithResult: (didPop, popResult) {
         if (!didPop) _goHome(context);
       },
-      child: Scaffold(
+      child: RecochaScaffold(
         body: SafeArea(
           child: Center(
             child: SingleChildScrollView(
@@ -48,10 +48,11 @@ class RewardScreen extends StatelessWidget {
                         width: 104,
                         height: 104,
                         decoration: BoxDecoration(
-                          color: (result.pendingVote
-                                  ? AppColors.yellow
-                                  : AppColors.success)
-                              .withValues(alpha: 0.16),
+                          color:
+                              (result.pendingVote
+                                      ? AppColors.yellow
+                                      : AppColors.success)
+                                  .withValues(alpha: 0.16),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
@@ -67,7 +68,9 @@ class RewardScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      result.pendingVote ? '¡Evidencia enviada!' : '¡Reto completado!',
+                      result.pendingVote
+                          ? '¡Evidencia enviada!'
+                          : '¡Reto completado!',
                       style: AppText.display,
                     ),
                     const SizedBox(height: 8),
@@ -83,39 +86,43 @@ class RewardScreen extends StatelessWidget {
                       )
                     else
                       Row(
-                      children: [
-                        Expanded(
-                          child: StatBox(
-                            icon: Icons.bolt_rounded,
-                            value: '+${result.xpGained}',
-                            label: 'XP',
+                        children: [
+                          Expanded(
+                            child: StatBox(
+                              icon: Icons.bolt_rounded,
+                              value: '+${result.xpGained}',
+                              label: 'XP',
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: StatBox(
-                            icon: Icons.monetization_on_rounded,
-                            value: '+${result.coinsGained}',
-                            label: 'BARRAS',
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: StatBox(
+                              icon: Icons.monetization_on_rounded,
+                              value: '+${result.coinsGained}',
+                              label: 'BARRAS',
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: StatBox(
-                            icon: Icons.local_fire_department_rounded,
-                            color: AppColors.orange,
-                            value: streakText,
-                            label: 'RACHA',
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: StatBox(
+                              icon: Icons.local_fire_department_rounded,
+                              color: AppColors.orange,
+                              value: streakText,
+                              label: 'RACHA',
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
                     if (result.doubleXpUsed) ...[
                       const SizedBox(height: 16),
                       const CCCard(
                         child: Row(
                           children: [
-                            Icon(Icons.bolt_rounded, color: AppColors.yellow, size: 28),
+                            Icon(
+                              Icons.bolt_rounded,
+                              color: AppColors.yellow,
+                              size: 28,
+                            ),
                             SizedBox(width: 12),
                             Expanded(
                               child: Text(
@@ -148,7 +155,10 @@ class RewardScreen extends StatelessWidget {
                                     style: AppText.heading,
                                   ),
                                   const SizedBox(height: 2),
-                                  Text(result.levelTitle, style: AppText.bodyMuted),
+                                  Text(
+                                    result.levelTitle,
+                                    style: AppText.bodyMuted,
+                                  ),
                                 ],
                               ),
                             ),

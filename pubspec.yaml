@@ -1,5 +1,5 @@
-name: challenge_us
-description: "ChallengeUs: retos diarios para tu bonche."
+﻿name: challenge_us
+description: "La Recocha: retos diarios para tu bonche."
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -21,3 +21,15 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
+  assets:
+    - assets/larecocha/backgrounds/
+    - assets/larecocha/badges/
+    - assets/larecocha/branding/
+    - assets/larecocha/navigation/
+    - assets/larecocha/shop/
+
+  fonts:
+    - family: LilitaOne
+      fonts:
+        - asset: assets/fonts/LilitaOne-Regular.ttf

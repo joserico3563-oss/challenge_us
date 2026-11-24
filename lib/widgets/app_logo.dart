@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../theme/theme.dart';
 
-/// Logo de La Recocha dibujado en código (sin assets).
 class AppLogo extends StatelessWidget {
   const AppLogo({
     super.key,
@@ -17,14 +16,11 @@ class AppLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final mark = Container(
+    final mark = Image.asset(
+      'assets/larecocha/branding/larechocha.png',
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        color: AppColors.yellow,
-        borderRadius: BorderRadius.circular(size * 0.3),
-      ),
-      child: Icon(Icons.bolt_rounded, color: AppColors.onYellow, size: size * 0.62),
+      fit: BoxFit.contain,
     );
 
     if (!showWordmark) return mark;
@@ -32,13 +28,19 @@ class AppLogo extends StatelessWidget {
     final wordmark = Text.rich(
       TextSpan(
         style: TextStyle(
+          fontFamily: 'LilitaOne',
           fontSize: vertical ? size * 0.42 : size * 0.72,
-          fontWeight: FontWeight.w800,
           color: AppColors.textPrimary,
+          shadows: const [
+            Shadow(color: Colors.black87, blurRadius: 5, offset: Offset(0, 2)),
+          ],
         ),
         children: const [
           TextSpan(text: 'La '),
-          TextSpan(text: 'Recocha', style: TextStyle(color: AppColors.yellow)),
+          TextSpan(
+            text: 'Recocha',
+            style: TextStyle(color: AppColors.yellow),
+          ),
         ],
       ),
     );
@@ -46,12 +48,21 @@ class AppLogo extends StatelessWidget {
     if (vertical) {
       return Column(
         mainAxisSize: MainAxisSize.min,
-        children: [mark, SizedBox(height: size * 0.22), wordmark],
+        children: [
+          mark,
+          SizedBox(height: size * 0.22),
+          wordmark,
+        ],
       );
     }
+
     return Row(
       mainAxisSize: MainAxisSize.min,
-      children: [mark, SizedBox(width: size * 0.3), wordmark],
+      children: [
+        mark,
+        SizedBox(width: size * 0.3),
+        wordmark,
+      ],
     );
   }
 }

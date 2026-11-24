@@ -1,3 +1,5 @@
+import '../../widgets/barras_icon.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../app/app_scope.dart';
@@ -20,7 +22,7 @@ class ChallengeDetailScreen extends StatelessWidget {
         final challenge = state.challengeById(challengeId);
 
         if (challenge == null) {
-          return Scaffold(
+          return RecochaScaffold(
             appBar: ccAppBar('Reto'),
             body: ErrorStateView(
               message: 'No encontramos este reto.',
@@ -34,13 +36,16 @@ class ChallengeDetailScreen extends StatelessWidget {
         final canCapture = status == ChallengeStatus.available;
         final retry = state.progressOf(challengeId)?.canRetry ?? false;
         final buttonLabel = switch (status) {
-          ChallengeStatus.available => retry ? 'Segundo intento: capturar evidencia' : 'Capturar evidencia',
+          ChallengeStatus.available =>
+            retry
+                ? 'Segundo intento: capturar evidencia'
+                : 'Capturar evidencia',
           ChallengeStatus.upcoming => 'Aún no empieza',
           ChallengeStatus.completed => 'Reto completado',
           ChallengeStatus.expired => 'Tiempo agotado',
         };
 
-        return Scaffold(
+        return RecochaScaffold(
           appBar: ccAppBar('Detalle del reto'),
           body: ListView(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -58,7 +63,11 @@ class ChallengeDetailScreen extends StatelessWidget {
                     label: challenge.difficulty.label,
                     color: challenge.difficulty.color,
                   ),
-                  InfoPill(label: status.label, icon: status.icon, color: status.color),
+                  InfoPill(
+                    label: status.label,
+                    icon: status.icon,
+                    color: status.color,
+                  ),
                 ],
               ),
               const SizedBox(height: 14),
@@ -129,7 +138,10 @@ class ChallengeDetailScreen extends StatelessWidget {
                         padding: EdgeInsets.only(
                           bottom: i == challenge.rules.length - 1 ? 0 : 12,
                         ),
-                        child: _RuleRow(number: i + 1, text: challenge.rules[i]),
+                        child: _RuleRow(
+                          number: i + 1,
+                          text: challenge.rules[i],
+                        ),
                       ),
                   ],
                 ),
@@ -144,9 +156,9 @@ class ChallengeDetailScreen extends StatelessWidget {
                 icon: canCapture ? Icons.camera_alt_rounded : null,
                 onPressed: canCapture
                     ? () => Navigator.of(context).pushNamed(
-                          AppRoutes.evidenceCapture,
-                          arguments: challenge.id,
-                        )
+                        AppRoutes.evidenceCapture,
+                        arguments: challenge.id,
+                      )
                     : null,
               ),
             ),
@@ -174,7 +186,9 @@ class _InfoTile extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: AppColors.yellow, size: 22),
+          icon == Icons.monetization_on_rounded
+              ? const BarrasIcon(size: 26)
+              : Icon(icon, color: AppColors.yellow, size: 22),
           const SizedBox(height: 10),
           Text(label, style: AppText.label),
           const SizedBox(height: 4),

@@ -1,3 +1,5 @@
+import 'barras_icon.dart';
+
 import 'package:flutter/material.dart';
 
 import '../theme/theme.dart';
@@ -20,18 +22,23 @@ class ValueChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.surface.withValues(alpha: 0.32),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 18, color: color),
+          (icon == Icons.monetization_on_rounded
+              ? const BarrasIcon(size: 18)
+              : Icon(icon, size: 18, color: color)),
           const SizedBox(width: 6),
           Text(
             text,
-            style: AppText.body.copyWith(fontSize: 14, fontWeight: FontWeight.w700),
+            style: AppText.body.copyWith(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),

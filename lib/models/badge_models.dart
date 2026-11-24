@@ -18,6 +18,22 @@ class BadgeInfo {
   /// Hito que hay que cumplir para desbloquearla.
   final String requirement;
   final IconData icon;
+
+  String get assetPath => switch (id) {
+    'first_challenge' => 'assets/larecocha/badges/ajaytuque.png',
+    'challenges_5' => 'assets/larecocha/badges/cogiendolavaina.png',
+    'challenges_25' => 'assets/larecocha/badges/bonchero.png',
+    'challenges_100' => 'assets/larecocha/badges/leyenda.png',
+    'streak_3' => 'assets/larecocha/badges/trescoronando.png',
+    'streak_7' => 'assets/larecocha/badges/nocogesuave.png',
+    'streak_30' => 'assets/larecocha/badges/elquenofalla.png',
+    'second_chance' => 'assets/larecocha/badges/la2da.png',
+    'fair_judge' => 'assets/larecocha/badges/elvar.png',
+    'weekly_champion' => 'assets/larecocha/badges/elreydelpico.png',
+    'monthly_champion' => 'assets/larecocha/badges/elquemanda.png',
+    'level_5' => 'assets/larecocha/badges/cacique.png',
+    _ => 'assets/larecocha/badges/ajaytuque.png',
+  };
 }
 
 /// Catálogo visual de insignias.
@@ -37,7 +53,8 @@ class BadgeCatalog {
     BadgeInfo(
       id: 'first_challenge',
       name: 'Ajá, ¿y Tú Qué?',
-      description: 'Te estrenaste en el bonche. ¡Ahora es que empieza la recocha!',
+      description:
+          'Te estrenaste en el bonche. ¡Ahora es que empieza la recocha!',
       requirement: 'Completa tu primer reto.',
       icon: Icons.flag_rounded,
     ),
@@ -93,8 +110,10 @@ class BadgeCatalog {
     BadgeInfo(
       id: 'fair_judge',
       name: 'El VAR del Bonche',
-      description: 'Aquí se revisa todo. Nadie se queda esperando su veredicto.',
-      requirement: 'Califica todas las evidencias de tus compañeros en 10 retos.',
+      description:
+          'Aquí se revisa todo. Nadie se queda esperando su veredicto.',
+      requirement:
+          'Califica todas las evidencias de tus compañeros en 10 retos.',
       icon: Icons.how_to_vote_rounded,
     ),
     BadgeInfo(

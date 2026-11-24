@@ -148,16 +148,10 @@ class ApiService {
 
   // ---------------------------------------------------------------- retos
 
-  /// GET /api/challenges/today — catálogo público (sin sesión).
-  static Future<List<ChallengeModel>> getChallengesToday() async {
-    final data = await _send(
-      () => http.get(Uri.parse('$baseUrl/api/challenges/today')),
-    );
-    return _challengeList(data, 'Error al cargar los retos');
-  }
-
   /// GET /api/bonches/{id}/challenges/today — retos del bonche (privado).
-  static Future<List<ChallengeModel>> getBoncheChallenges(String boncheId) async {
+  static Future<List<ChallengeModel>> getBoncheChallenges(
+    String boncheId,
+  ) async {
     final data = await _send(
       () => http.get(
         Uri.parse('$baseUrl/api/bonches/$boncheId/challenges/today'),
@@ -263,9 +257,15 @@ class ApiService {
   /// GET /api/votes/pending — evidencias de compañeros por calificar.
   static Future<List<PendingEvidence>> getPendingVotes() async {
     final data = await _send(
-      () => http.get(Uri.parse('$baseUrl/api/votes/pending'), headers: _headers()),
+      () => http.get(
+        Uri.parse('$baseUrl/api/votes/pending'),
+        headers: _headers(),
+      ),
     );
-    final items = _map(data, 'No pudimos cargar las evidencias por calificar.')['items'];
+    final items = _map(
+      data,
+      'No pudimos cargar las evidencias por calificar.',
+    )['items'];
     if (items is! List) return const <PendingEvidence>[];
     return [
       for (final item in items)
@@ -290,7 +290,10 @@ class ApiService {
   /// GET /api/rewards/unseen — resultados que el usuario aún no ha visto.
   static Future<List<RewardNotice>> getUnseenRewards() async {
     final data = await _send(
-      () => http.get(Uri.parse('$baseUrl/api/rewards/unseen'), headers: _headers()),
+      () => http.get(
+        Uri.parse('$baseUrl/api/rewards/unseen'),
+        headers: _headers(),
+      ),
     );
     if (data is! List) return const <RewardNotice>[];
     return [
@@ -354,7 +357,8 @@ class ApiService {
   /// GET /api/store/items
   static Future<List<StoreItemModel>> getStoreItems() async {
     final data = await _send(
-      () => http.get(Uri.parse('$baseUrl/api/store/items'), headers: _headers()),
+      () =>
+          http.get(Uri.parse('$baseUrl/api/store/items'), headers: _headers()),
     );
     if (data is! List) return const <StoreItemModel>[];
     return [
@@ -387,7 +391,9 @@ class ApiService {
         body: jsonEncode({"item_id": itemId, "request_id": requestId}),
       ),
     );
-    return PurchaseReceipt.fromJson(_map(data, 'No pudimos completar la compra.'));
+    return PurchaseReceipt.fromJson(
+      _map(data, 'No pudimos completar la compra.'),
+    );
   }
 
   // ----------------------------------------------------------------- bonches
@@ -419,10 +425,7 @@ class ApiService {
       () => http.post(
         Uri.parse('$baseUrl/api/bonches/join'),
         headers: _headers(json: true),
-        body: jsonEncode({
-          "invite_code": inviteCode,
-          "usuario_id": usuarioId,
-        }),
+        body: jsonEncode({"invite_code": inviteCode, "usuario_id": usuarioId}),
       ),
     );
     return _map(data, 'Error al unirse al bonche');
@@ -470,16 +473,6 @@ class ApiService {
 
   // ----------------------------------------------------------------- ranking
 
-  /// GET /api/ranking — público.
-  static Future<List<UserModel>> getRanking() async {
-    final data = await _send(() => http.get(Uri.parse('$baseUrl/api/ranking')));
-    if (data is! List) throw const ApiException('Error al cargar el ranking');
-    return [
-      for (final item in data)
-        if (item is Map<String, dynamic>) UserModel.fromJson(item),
-    ];
-  }
-
   // ----------------------------------------------------------------- interno
 
   /// GET /api/bonches/{id}/ranking?period=weekly|monthly (privado).
@@ -519,7 +512,8 @@ class ApiService {
           }
         }
         final message = data['message'] ?? data['error'];
-        if (message is String && message.trim().isNotEmpty) return message.trim();
+        if (message is String && message.trim().isNotEmpty)
+          return message.trim();
       }
     } catch (_) {
       // Respuesta que no es JSON: se usa tal cual si es corta.

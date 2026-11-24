@@ -1,3 +1,5 @@
+import 'barras_icon.dart';
+
 import 'package:flutter/material.dart';
 
 import '../theme/theme.dart';
@@ -20,14 +22,17 @@ class InfoPill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.14),
+        color: const Color(0xFF101D30).withValues(alpha: 0.30),
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 14, color: color),
+            (icon == Icons.monetization_on_rounded
+                ? const BarrasIcon(size: 14)
+                : Icon(icon, size: 14, color: color)),
             const SizedBox(width: 4),
           ],
           Text(label, style: AppText.label.copyWith(color: color)),

@@ -4,6 +4,7 @@ class BoncheMemberModel {
   final int xp;
   final int streak;
   final String role;
+  final int? completedChallenges;
 
   const BoncheMemberModel({
     required this.id,
@@ -11,6 +12,7 @@ class BoncheMemberModel {
     required this.xp,
     required this.streak,
     required this.role,
+    this.completedChallenges,
   });
 
   factory BoncheMemberModel.fromJson(Map<String, dynamic> json) {
@@ -20,6 +22,7 @@ class BoncheMemberModel {
       xp: (json['xp'] as num?)?.toInt() ?? 0,
       streak: (json['streak'] as num?)?.toInt() ?? 0,
       role: (json['role'] ?? 'MEMBER').toString(),
+      completedChallenges: (json['completedChallenges'] as num?)?.toInt(),
     );
   }
 }
@@ -67,8 +70,10 @@ class BoncheModel {
       createdAt: json['createdAt']?.toString(),
       members: rawMembers is List
           ? rawMembers
-              .map((m) => BoncheMemberModel.fromJson(m as Map<String, dynamic>))
-              .toList()
+                .map(
+                  (m) => BoncheMemberModel.fromJson(m as Map<String, dynamic>),
+                )
+                .toList()
           : const <BoncheMemberModel>[],
       challengesPerDay: (json['challengesPerDay'] as num?)?.toInt() ?? 3,
       windowMinutes: (json['windowMinutes'] as num?)?.toInt() ?? 90,

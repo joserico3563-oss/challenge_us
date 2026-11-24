@@ -1,3 +1,5 @@
+import '../profile/open_member_profile.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -51,10 +53,9 @@ class BoncheScreen extends StatelessWidget {
           SecondaryButton(
             label: 'Editar bonche y retos',
             icon: Icons.edit_rounded,
-            onPressed: () => Navigator.of(context).pushNamed(
-              AppRoutes.boncheConfig,
-              arguments: false,
-            ),
+            onPressed: () =>
+                Navigator.of(context)
+                    .pushNamed(AppRoutes.boncheConfig, arguments: false),
           ),
         ],
         const SizedBox(height: 28),
@@ -91,7 +92,8 @@ class _GroupHeaderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final since = '${kMonthsLong[group.createdAt.month - 1].toLowerCase()} de ${group.createdAt.year}';
+    final since =
+        '${kMonthsLong[group.createdAt.month - 1].toLowerCase()} de ${group.createdAt.year}';
 
     return CCCard(
       highlight: true,
@@ -105,13 +107,12 @@ class _GroupHeaderCard extends StatelessWidget {
                 width: 64,
                 height: 64,
                 decoration: BoxDecoration(
-                  color: AppColors.yellow,
+                  color: Colors.transparent,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Icon(
-                  Icons.groups_rounded,
-                  color: AppColors.onYellow,
-                  size: 34,
+                child: Image.asset(
+                  'assets/larecocha/navigation/bonche.png',
+                  fit: BoxFit.contain,
                 ),
               ),
               const SizedBox(width: 14),
@@ -137,7 +138,10 @@ class _GroupHeaderCard extends StatelessWidget {
                 icon: Icons.lock_rounded,
                 color: AppColors.yellow,
               ),
-              InfoPill(label: '$memberCount integrantes', icon: Icons.groups_rounded),
+              InfoPill(
+                label: '$memberCount integrantes',
+                icon: Icons.groups_rounded,
+              ),
               InfoPill(
                 label: 'Líder: ${leader?.firstName ?? '-'}',
                 icon: Icons.workspace_premium_rounded,
@@ -162,7 +166,9 @@ class _InviteCodeCard extends StatelessWidget {
     await Clipboard.setData(ClipboardData(text: code));
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Código copiado. ¡Compártelo con tu parche!')),
+      const SnackBar(
+        content: Text('Código copiado. ¡Compártelo con tu parche!'),
+      ),
     );
   }
 
@@ -181,7 +187,10 @@ class _InviteCodeCard extends StatelessWidget {
                   color: AppColors.yellowSoft,
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: const Icon(Icons.vpn_key_rounded, color: AppColors.yellow),
+                child: const Icon(
+                  Icons.vpn_key_rounded,
+                  color: AppColors.yellow,
+                ),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -260,50 +269,54 @@ class _MemberRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
-        children: [
-          UserAvatar(initials: member.initials, radius: 22),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 4,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(member.name, style: AppText.heading),
-                    if (isLeader)
-                      const InfoPill(
-                        label: 'Líder',
-                        icon: Icons.workspace_premium_rounded,
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => openMemberProfile(context, member.id),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Row(
+          children: [
+            UserAvatar(initials: member.initials, radius: 22),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(member.name, style: AppText.heading),
+                      if (isLeader)
+                        const InfoPill(
+                          label: 'Líder',
+                          icon: Icons.workspace_premium_rounded,
+                          color: AppColors.orange,
+                        ),
+                      if (isMe)
+                        const InfoPill(label: 'Tú', color: AppColors.yellow),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Text('Nivel ${member.level}', style: AppText.bodyMuted),
+                      const SizedBox(width: 12),
+                      const Icon(
+                        Icons.local_fire_department_rounded,
+                        size: 16,
                         color: AppColors.orange,
                       ),
-                    if (isMe)
-                      const InfoPill(label: 'Tú', color: AppColors.yellow),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Text('Nivel ${member.level}', style: AppText.bodyMuted),
-                    const SizedBox(width: 12),
-                    const Icon(
-                      Icons.local_fire_department_rounded,
-                      size: 16,
-                      color: AppColors.orange,
-                    ),
-                    const SizedBox(width: 2),
-                    Text('${member.streak}', style: AppText.bodyMuted),
-                  ],
-                ),
-              ],
+                      const SizedBox(width: 2),
+                      Text('${member.streak}', style: AppText.bodyMuted),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -357,7 +370,10 @@ class _ChallengeSettings extends StatelessWidget {
               for (final schedule in group.schedules)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 14),
-                  child: _ScheduleRow(schedule: schedule, totalMembers: totalMembers),
+                  child: _ScheduleRow(
+                    schedule: schedule,
+                    totalMembers: totalMembers,
+                  ),
                 ),
               Text(
                 'Cada reto dura ${windowLabel(group.windowMinutes)}. Los horarios se eligen para coincidir con el momento en que más integrantes están disponibles.',
@@ -380,8 +396,9 @@ class _ScheduleRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final everyone = schedule.availableMembers >= totalMembers;
-    final ratio =
-        totalMembers == 0 ? 0.0 : schedule.availableMembers / totalMembers;
+    final ratio = totalMembers == 0
+        ? 0.0
+        : schedule.availableMembers / totalMembers;
 
     return Row(
       children: [
@@ -403,10 +420,7 @@ class _ScheduleRow extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(schedule.label, style: AppText.heading),
-                  Text(
-                    'Todos los días',
-                    style: AppText.label,
-                  ),
+                  Text('Todos los días', style: AppText.label),
                 ],
               ),
               const SizedBox(height: 8),
@@ -435,8 +449,8 @@ class _VotesCard extends StatelessWidget {
     final title = empty
         ? 'Por el momento no hay ninguna evidencia o ya las calificaste todas.'
         : (count == 1
-            ? 'Tienes 1 evidencia por calificar'
-            : 'Tienes $count evidencias por calificar');
+              ? 'Tienes 1 evidencia por calificar'
+              : 'Tienes $count evidencias por calificar');
 
     return CCCard(
       highlight: !empty,

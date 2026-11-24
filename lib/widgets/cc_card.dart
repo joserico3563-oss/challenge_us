@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../theme/theme.dart';
+import 'glass_card.dart';
 
-/// Tarjeta base con borde suave.
 class CCCard extends StatelessWidget {
   const CCCard({
     super.key,
@@ -19,20 +19,27 @@ class CCCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.surface,
-      clipBehavior: Clip.antiAlias,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-          color: highlight
-              ? AppColors.yellow.withValues(alpha: 0.6)
-              : AppColors.border,
+    return GlassCard(
+      opacity: 0.32,
+      blur: 10,
+      radius: 20,
+      padding: EdgeInsets.zero,
+      child: Material(
+        color: Colors.transparent,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: highlight
+                ? AppColors.yellow.withValues(alpha: 0.75)
+                : Colors.transparent,
+            width: 1.2,
+          ),
         ),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(padding: padding, child: child),
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(padding: padding, child: child),
+        ),
       ),
     );
   }

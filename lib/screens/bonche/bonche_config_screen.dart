@@ -43,7 +43,9 @@ class _BoncheConfigScreenState extends State<BoncheConfigScreen> {
     } else {
       _times = _defaultTimes(_count);
     }
-    _window = ((_window / 10).round() * 10).clamp(_minWindow, _maxWindow).toInt();
+    _window = ((_window / 10).round() * 10)
+        .clamp(_minWindow, _maxWindow)
+        .toInt();
   }
 
   @override
@@ -119,9 +121,9 @@ class _BoncheConfigScreenState extends State<BoncheConfigScreen> {
       _saving = true;
       _error = null;
     });
-    final sorted = [..._times]..sort(
-        (a, b) =>
-            (a.hour * 60 + a.minute).compareTo(b.hour * 60 + b.minute),
+    final sorted = [..._times]
+      ..sort(
+        (a, b) => (a.hour * 60 + a.minute).compareTo(b.hour * 60 + b.minute),
       );
     final error = await app.saveGroupConfig(
       name: _name.text.trim(),
@@ -151,7 +153,7 @@ class _BoncheConfigScreenState extends State<BoncheConfigScreen> {
   Widget build(BuildContext context) {
     final app = AppScope.of(context);
     if (app.group != null && !app.isLeader) {
-      return Scaffold(
+      return RecochaScaffold(
         appBar: ccAppBar('Editar bonche'),
         body: const EmptyStateView(
           icon: Icons.lock_rounded,
@@ -161,8 +163,10 @@ class _BoncheConfigScreenState extends State<BoncheConfigScreen> {
       );
     }
 
-    return Scaffold(
-      appBar: ccAppBar(widget.isSetup ? 'Configura tus retos' : 'Editar bonche'),
+    return RecochaScaffold(
+      appBar: ccAppBar(
+        widget.isSetup ? 'Configura tus retos' : 'Editar bonche',
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
         children: [

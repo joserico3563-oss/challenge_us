@@ -20,9 +20,9 @@ class SegmentedTabs extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: AppColors.surface.withValues(alpha: 0.32),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
       ),
       child: Row(
         children: [
@@ -36,7 +36,9 @@ class SegmentedTabs extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: i == selected ? AppColors.yellow : Colors.transparent,
+                    color: i == selected
+                        ? AppColors.yellow
+                        : Colors.transparent,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(

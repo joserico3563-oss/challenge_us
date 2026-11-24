@@ -17,8 +17,6 @@ class BadgesSummaryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final total = BadgeCatalog.all.length;
-    final unlocked =
-        BadgeCatalog.all.where((b) => BadgeCatalog.isUnlocked(b.id)).length;
 
     return CCCard(
       child: Column(
@@ -30,7 +28,7 @@ class BadgesSummaryCard extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  '$unlocked de $total desbloqueadas',
+                  '$total insignias del bonche',
                   style: AppText.heading,
                 ),
               ),
@@ -41,8 +39,7 @@ class BadgesSummaryCard extends StatelessWidget {
             spacing: 8,
             runSpacing: 8,
             children: [
-              for (final badge in BadgeCatalog.all.take(8))
-                _BadgeDot(badge: badge),
+              for (final badge in BadgeCatalog.all) _BadgeDot(badge: badge),
             ],
           ),
           const SizedBox(height: 14),
@@ -64,23 +61,16 @@ class _BadgeDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final unlocked = BadgeCatalog.isUnlocked(badge.id);
     return Tooltip(
       message: badge.name,
       child: Container(
-        width: 44,
-        height: 44,
+        width: 54,
+        height: 54,
         decoration: BoxDecoration(
-          color: unlocked ? AppColors.yellowSoft : AppColors.surfaceAlt,
+          color: Colors.transparent,
           borderRadius: BorderRadius.circular(14),
         ),
-        child: Icon(
-          badge.icon,
-          size: 22,
-          color: unlocked
-              ? AppColors.yellow
-              : AppColors.textSecondary.withValues(alpha: 0.5),
-        ),
+        child: _BadgeArtwork(badge: badge),
       ),
     );
   }
@@ -95,20 +85,12 @@ class BadgesScreen extends StatefulWidget {
 }
 
 class _BadgesScreenState extends State<BadgesScreen> {
-  int _tab = 0;
-
   @override
   Widget build(BuildContext context) {
     final all = BadgeCatalog.all;
-    final shown = all.where((b) {
-      final unlocked = BadgeCatalog.isUnlocked(b.id);
-      if (_tab == 1) return !unlocked;
-      if (_tab == 2) return unlocked;
-      return true;
-    }).toList();
-    final unlockedCount = all.where((b) => BadgeCatalog.isUnlocked(b.id)).length;
+    final shown = all;
 
-    return Scaffold(
+    return RecochaScaffold(
       appBar: ccAppBar('Insignias'),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
@@ -118,7 +100,7 @@ class _BadgesScreenState extends State<BadgesScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '$unlockedCount de ${all.length} desbloqueadas',
+                  '${all.length} insignias del bonche',
                   style: AppText.heading,
                 ),
                 const SizedBox(height: 6),
@@ -128,17 +110,11 @@ class _BadgesScreenState extends State<BadgesScreen> {
                 ),
                 const SizedBox(height: 6),
                 const Text(
-                  'El desbloqueo automático todavía no está activo: por ahora todas aparecen bloqueadas.',
+                  'Explora las insignias y sus requisitos. El sistema de desbloqueo no está disponible.',
                   style: AppText.bodyMuted,
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 16),
-          SegmentedTabs(
-            labels: const ['Todas', 'Bloqueadas', 'Desbloqueadas'],
-            selected: _tab,
-            onChanged: (i) => setState(() => _tab = i),
           ),
           const SizedBox(height: 16),
           if (shown.isEmpty)
@@ -167,26 +143,18 @@ class _BadgeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final unlocked = BadgeCatalog.isUnlocked(badge.id);
-    final color = unlocked ? AppColors.yellow : AppColors.textSecondary;
-
     return CCCard(
-      highlight: unlocked,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            width: 52,
-            height: 52,
+            width: 76,
+            height: 76,
             decoration: BoxDecoration(
-              color: unlocked ? AppColors.yellowSoft : AppColors.surfaceAlt,
+              color: Colors.transparent,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: Icon(
-              badge.icon,
-              size: 28,
-              color: unlocked ? AppColors.yellow : color.withValues(alpha: 0.6),
-            ),
+            child: _BadgeArtwork(badge: badge),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -197,14 +165,7 @@ class _BadgeCard extends StatelessWidget {
                   spacing: 8,
                   runSpacing: 4,
                   crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(badge.name, style: AppText.heading),
-                    InfoPill(
-                      label: unlocked ? 'Desbloqueada' : 'Bloqueada',
-                      icon: unlocked ? Icons.check_rounded : Icons.lock_rounded,
-                      color: unlocked ? AppColors.success : AppColors.textSecondary,
-                    ),
-                  ],
+                  children: [Text(badge.name, style: AppText.heading)],
                 ),
                 const SizedBox(height: 4),
                 Text(badge.description, style: AppText.bodyMuted),
@@ -218,5 +179,16 @@ class _BadgeCard extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _BadgeArtwork extends StatelessWidget {
+  const _BadgeArtwork({required this.badge});
+
+  final BadgeInfo badge;
+
+  @override
+  Widget build(BuildContext context) {
+    return Image.asset(badge.assetPath, fit: BoxFit.contain);
   }
 }

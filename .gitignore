@@ -46,3 +46,23 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Seguridad y archivos locales
+.env
+.env.*
+!.env.example
+*.bak
+*.jks
+*.keystore
+*.p12
+*.pfx
+*.key
+*.pem
+key.properties
+*.exe
+frontend_dump.txt
+/Set-Location
+/ersUserchallenge_us*
+
+/volcado_flutter.txt
+/tool/

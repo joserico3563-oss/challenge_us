@@ -1,3 +1,5 @@
+import 'barras_icon.dart';
+
 import 'package:flutter/material.dart';
 
 import '../theme/theme.dart';
@@ -24,7 +26,9 @@ class StatBox extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 10),
       child: Column(
         children: [
-          Icon(icon, color: color, size: 24),
+          (icon == Icons.monetization_on_rounded
+              ? const BarrasIcon(size: 24)
+              : Icon(icon, color: color, size: 24)),
           const SizedBox(height: 8),
           Text(value, style: AppText.title),
           const SizedBox(height: 2),

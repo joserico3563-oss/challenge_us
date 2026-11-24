@@ -1,3 +1,5 @@
+import '../profile/open_member_profile.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../app/app_scope.dart';
@@ -43,8 +45,9 @@ class _RankingScreenState extends State<RankingScreen> {
     final entries = state.liveEntries(_period);
     final myIndex = entries.indexWhere((e) => e.memberId == state.user.id);
     final me = myIndex >= 0 ? entries[myIndex] : null;
-    final groupAverage =
-        board.groupSeries.isEmpty ? 0 : board.groupSeries.last.round();
+    final groupAverage = board.groupSeries.isEmpty
+        ? 0
+        : board.groupSeries.last.round();
     final myPoints = me?.points ?? 0;
 
     return ListView(
@@ -173,47 +176,62 @@ class _Podium extends StatelessWidget {
   final List<RankingEntry> entries;
   final AppState state;
 
-  Widget _slot(int rank, RankingEntry entry, double barHeight, Color color) {
+  Widget _slot(
+    BuildContext context,
+    int rank,
+    RankingEntry entry,
+    double barHeight,
+    Color color,
+  ) {
     final member = state.memberById(entry.memberId);
     return Expanded(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (rank == 1)
-            const Icon(
-              Icons.workspace_premium_rounded,
-              color: AppColors.yellow,
-              size: 28,
-            )
-          else
-            const SizedBox(height: 28),
-          UserAvatar(
-            initials: member?.initials ?? '?',
-            radius: rank == 1 ? 30 : 24,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            member?.firstName ?? 'Jugador',
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppText.body.copyWith(fontSize: 14, fontWeight: FontWeight.w700),
-          ),
-          Text('${entry.points} XP', style: AppText.label),
-          const SizedBox(height: 8),
-          Container(
-            height: barHeight,
-            width: double.infinity,
-            margin: const EdgeInsets.symmetric(horizontal: 6),
-            padding: const EdgeInsets.only(top: 10),
-            alignment: Alignment.topCenter,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.18),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
-              border: Border.all(color: color.withValues(alpha: 0.6)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () => openMemberProfile(context, entry.memberId),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (rank == 1)
+              const Icon(
+                Icons.workspace_premium_rounded,
+                color: AppColors.yellow,
+                size: 28,
+              )
+            else
+              const SizedBox(height: 28),
+            UserAvatar(
+              initials: member?.initials ?? '?',
+              radius: rank == 1 ? 30 : 24,
             ),
-            child: Text('$rank', style: AppText.title.copyWith(color: color)),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              member?.firstName ?? 'Jugador',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppText.body.copyWith(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            Text('${entry.points} XP', style: AppText.label),
+            const SizedBox(height: 8),
+            Container(
+              height: barHeight,
+              width: double.infinity,
+              margin: const EdgeInsets.symmetric(horizontal: 6),
+              padding: const EdgeInsets.only(top: 10),
+              alignment: Alignment.topCenter,
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.18),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(14),
+                ),
+                border: Border.all(color: color.withValues(alpha: 0.6)),
+              ),
+              child: Text('$rank', style: AppText.title.copyWith(color: color)),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -223,9 +241,9 @@ class _Podium extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        _slot(2, entries[1], 84, AppColors.silver),
-        _slot(1, entries[0], 112, AppColors.yellow),
-        _slot(3, entries[2], 64, AppColors.orange),
+        _slot(context, 2, entries[1], 84, AppColors.silver),
+        _slot(context, 1, entries[0], 112, AppColors.yellow),
+        _slot(context, 3, entries[2], 64, AppColors.orange),
       ],
     );
   }
@@ -253,11 +271,19 @@ class _StandingsCard extends StatelessWidget {
                 Expanded(child: Text('JUGADOR', style: AppText.label)),
                 SizedBox(
                   width: 44,
-                  child: Text('RETOS', textAlign: TextAlign.center, style: AppText.label),
+                  child: Text(
+                    'RETOS',
+                    textAlign: TextAlign.center,
+                    style: AppText.label,
+                  ),
                 ),
                 SizedBox(
                   width: 60,
-                  child: Text('XP', textAlign: TextAlign.right, style: AppText.label),
+                  child: Text(
+                    'XP',
+                    textAlign: TextAlign.right,
+                    style: AppText.label,
+                  ),
                 ),
               ],
             ),
@@ -292,57 +318,63 @@ class _StandingRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final delta = entry.previousRank - rank;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 4),
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-      decoration: BoxDecoration(
-        color: isMe ? AppColors.yellowSoft : Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 22,
-            child: Text(
-              '$rank',
-              style: AppText.heading.copyWith(
-                color: rank == 1 ? AppColors.yellow : AppColors.textPrimary,
+    return InkWell(
+      borderRadius: BorderRadius.circular(14),
+      onTap: () => openMemberProfile(context, entry.memberId),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 4),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+        decoration: BoxDecoration(
+          color: isMe ? AppColors.yellowSoft : Colors.transparent,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 22,
+              child: Text(
+                '$rank',
+                style: AppText.heading.copyWith(
+                  color: rank == 1 ? AppColors.yellow : AppColors.textPrimary,
+                ),
               ),
             ),
-          ),
-          SizedBox(width: 30, child: _RankDelta(delta: delta)),
-          UserAvatar(initials: member?.initials ?? '?', radius: 16),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  isMe ? '${member?.firstName ?? 'Tú'} (tú)' : member?.firstName ?? 'Jugador',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppText.body.copyWith(fontWeight: FontWeight.w700),
-                ),
-              ],
+            SizedBox(width: 30, child: _RankDelta(delta: delta)),
+            UserAvatar(initials: member?.initials ?? '?', radius: 16),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isMe
+                        ? '${member?.firstName ?? 'Tú'} (tú)'
+                        : member?.firstName ?? 'Jugador',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppText.body.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
             ),
-          ),
-          SizedBox(
-            width: 44,
-            child: Text(
-              '${entry.completed}',
-              textAlign: TextAlign.center,
-              style: AppText.body,
+            SizedBox(
+              width: 44,
+              child: Text(
+                '${entry.completed}',
+                textAlign: TextAlign.center,
+                style: AppText.body,
+              ),
             ),
-          ),
-          SizedBox(
-            width: 60,
-            child: Text(
-              '${entry.points}',
-              textAlign: TextAlign.right,
-              style: AppText.heading,
+            SizedBox(
+              width: 60,
+              child: Text(
+                '${entry.points}',
+                textAlign: TextAlign.right,
+                style: AppText.heading,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -424,6 +456,7 @@ class _MyStats extends StatelessWidget {
     );
   }
 }
+
 class _LegendDot extends StatelessWidget {
   const _LegendDot({required this.color, required this.label});
 
@@ -512,10 +545,15 @@ class _HistoryRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(entry.label, style: AppText.body.copyWith(fontWeight: FontWeight.w700)),
+                Text(
+                  entry.label,
+                  style: AppText.body.copyWith(fontWeight: FontWeight.w700),
+                ),
                 const SizedBox(height: 2),
                 Text(
-                  iWon ? '¡Ganaste tú!' : 'Ganó ${winner?.firstName ?? 'otro integrante'}',
+                  iWon
+                      ? '¡Ganaste tú!'
+                      : 'Ganó ${winner?.firstName ?? 'otro integrante'}',
                   style: AppText.bodyMuted,
                 ),
               ],
@@ -524,7 +562,10 @@ class _HistoryRow extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text('Tú: ${entry.userRank}.º', style: AppText.body.copyWith(fontWeight: FontWeight.w700)),
+              Text(
+                'Tú: ${entry.userRank}.º',
+                style: AppText.body.copyWith(fontWeight: FontWeight.w700),
+              ),
               const SizedBox(height: 2),
               Text('${entry.userPoints} XP', style: AppText.label),
             ],
@@ -590,7 +631,9 @@ class _EvolutionChartPainter extends CustomPainter {
       bool fill,
     ) {
       if (values.isEmpty) return;
-      final count = values.length > labels.length ? labels.length : values.length;
+      final count = values.length > labels.length
+          ? labels.length
+          : values.length;
 
       final path = Path()..moveTo(xAt(0), yAt(values[0]));
       for (var i = 1; i < count; i++) {
@@ -622,7 +665,11 @@ class _EvolutionChartPainter extends CustomPainter {
 
       final dotPaint = Paint()..color = color;
       for (var i = 0; i < count; i++) {
-        canvas.drawCircle(Offset(xAt(i), yAt(values[i])), strokeWidth + 1, dotPaint);
+        canvas.drawCircle(
+          Offset(xAt(i), yAt(values[i])),
+          strokeWidth + 1,
+          dotPaint,
+        );
       }
     }
 

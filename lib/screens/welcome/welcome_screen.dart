@@ -1,3 +1,5 @@
+﻿import '../../widgets/glass_card.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../app/app_scope.dart';
@@ -21,7 +23,7 @@ class WelcomeScreen extends StatelessWidget {
     showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface,
+      backgroundColor: const Color(0xF5101D30),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -38,64 +40,140 @@ class WelcomeScreen extends StatelessWidget {
     final busy = AppScope.of(context).authBusy;
 
     return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Spacer(),
-              Container(
-                width: 90,
-                height: 90,
-                decoration: BoxDecoration(
-                  color: AppColors.yellow,
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                child: const Icon(
-                  Icons.bolt_rounded,
-                  size: 54,
-                  color: AppColors.surface,
-                ),
-              ),
-              const SizedBox(height: 24),
-              const Text.rich(
-                TextSpan(
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                  children: [
-                    TextSpan(text: 'La '),
-                    TextSpan(
-                      text: 'Recocha',
-                      style: TextStyle(color: AppColors.yellow),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Pequeños retos. Grandes bonches.',
-                style: AppText.heading,
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                'Retos diarios entre amigos. Compite sano, ríe y gana con tu parche.',
-                textAlign: TextAlign.center,
-                style: AppText.bodyMuted,
-              ),
-              const Spacer(),
-              PrimaryButton(
-                label: 'Continuar con correo',
-                icon: Icons.mail_outline_rounded,
-                loading: busy,
-                onPressed: () => _openEmailSheet(context),
-              ),
-            ],
+      backgroundColor: const Color(0xFF101D30),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.asset(
+            'assets/larecocha/backgrounds/1erapantalla.png',
+            fit: BoxFit.cover,
+            alignment: Alignment.center,
           ),
-        ),
+
+          const ColoredBox(color: Color(0x40000000)),
+
+          SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 24,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight - 48,
+                    ),
+                    child: IntrinsicHeight(
+                      child: Column(
+                        children: [
+                          const Spacer(flex: 3),
+
+                          Image.asset(
+                            'assets/larecocha/branding/larechocha.png',
+                            width: 220,
+                            fit: BoxFit.contain,
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          GlassCard(
+                            opacity: 0.10,
+                            blur: 3,
+                            radius: 28,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 22,
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Stack(
+                                    children: [
+                                      Text(
+                                        'La Recocha',
+                                        style: TextStyle(
+                                          fontFamily: 'LilitaOne',
+                                          fontSize: 52,
+                                          letterSpacing: -1,
+                                          foreground: Paint()
+                                            ..style = PaintingStyle.stroke
+                                            ..strokeWidth = 6
+                                            ..strokeJoin = StrokeJoin.round
+                                            ..color = const Color(0xFF101D30),
+                                        ),
+                                      ),
+                                      const Text.rich(
+                                        TextSpan(
+                                          style: TextStyle(
+                                            fontFamily: 'LilitaOne',
+                                            fontSize: 52,
+                                            letterSpacing: -1,
+                                            color: Colors.white,
+                                          ),
+                                          children: [
+                                            TextSpan(text: 'La '),
+                                            TextSpan(
+                                              text: 'Recocha',
+                                              style: TextStyle(
+                                                color: AppColors.yellow,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 14),
+                                const Text(
+                                  'Pequeños retos. Grandes bonches.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.w800,
+                                    shadows: [
+                                      Shadow(
+                                        color: Colors.black54,
+                                        blurRadius: 5,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                const Text(
+                                  'Retos diarios entre amigos. Compite sano, ríe y gana con tu parche.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Color(0xFFF2F5FA),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    height: 1.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Spacer(flex: 4),
+
+                          PrimaryButton(
+                            label: 'Continuar con correo',
+                            icon: Icons.mail_outline_rounded,
+                            loading: busy,
+                            onPressed: () => _openEmailSheet(context),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -192,7 +270,8 @@ class _EmailSheetState extends State<_EmailSheet> {
                   icon: Icons.person_outline_rounded,
                 ),
                 validator: (value) {
-                  if ((value ?? '').trim().length < 2) return 'Escribe tu nombre';
+                  if ((value ?? '').trim().length < 2)
+                    return 'Escribe tu nombre';
                   return null;
                 },
               ),
@@ -223,7 +302,8 @@ class _EmailSheetState extends State<_EmailSheet> {
                 label: 'Contraseña',
                 icon: Icons.lock_outline_rounded,
                 suffix: IconButton(
-                  onPressed: () => setState(() => _hidePassword = !_hidePassword),
+                  onPressed: () =>
+                      setState(() => _hidePassword = !_hidePassword),
                   icon: Icon(
                     _hidePassword
                         ? Icons.visibility_outlined
@@ -239,7 +319,10 @@ class _EmailSheetState extends State<_EmailSheet> {
             ),
             if (_error != null) ...[
               const SizedBox(height: 12),
-              Text(_error!, style: AppText.body.copyWith(color: AppColors.error)),
+              Text(
+                _error!,
+                style: AppText.body.copyWith(color: AppColors.error),
+              ),
             ],
             const SizedBox(height: 22),
             PrimaryButton(
@@ -253,9 +336,9 @@ class _EmailSheetState extends State<_EmailSheet> {
                 onPressed: _busy
                     ? null
                     : () => setState(() {
-                          _register = !_register;
-                          _error = null;
-                        }),
+                        _register = !_register;
+                        _error = null;
+                      }),
                 child: Text(
                   _register
                       ? '¿Ya tienes cuenta? Entra'
@@ -269,3 +352,6 @@ class _EmailSheetState extends State<_EmailSheet> {
     );
   }
 }
+
+
+

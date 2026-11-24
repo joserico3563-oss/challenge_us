@@ -1,3 +1,5 @@
+import '../../widgets/glass_card.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -78,12 +80,10 @@ class _BoncheSetupScreenState extends State<BoncheSetupScreen> {
     });
   }
 
-    Future<void> _openConfig() async {
+  Future<void> _openConfig() async {
     if (!mounted) return;
-    await Navigator.of(context).pushNamed(
-      AppRoutes.boncheConfig,
-      arguments: true,
-    );
+    await Navigator.of(context)
+        .pushNamed(AppRoutes.boncheConfig, arguments: true);
   }
 
   Future<void> _join() async {
@@ -112,26 +112,31 @@ class _BoncheSetupScreenState extends State<BoncheSetupScreen> {
   Future<void> _copy(String text, String message) async {
     await Clipboard.setData(ClipboardData(text: text));
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return RecochaScaffold(
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 420),
-              child: switch (_step) {
-                _Step.choose => _buildChoose(),
-                _Step.create => _buildCreate(),
-                _Step.join => _buildJoin(),
-                _Step.created => _buildCreated(),
-              },
+              child: GlassCard(
+                opacity: 0.32,
+                blur: 10,
+                radius: 28,
+                padding: const EdgeInsets.all(22),
+                child: switch (_step) {
+                  _Step.choose => _buildChoose(),
+                  _Step.create => _buildCreate(),
+                  _Step.join => _buildJoin(),
+                  _Step.created => _buildCreated(),
+                },
+              ),
             ),
           ),
         ),
@@ -291,7 +296,9 @@ class _BoncheSetupScreenState extends State<BoncheSetupScreen> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Center(child: _badge(Icons.check_circle_rounded, color: AppColors.success)),
+        Center(
+          child: _badge(Icons.check_circle_rounded, color: AppColors.success),
+        ),
         const SizedBox(height: 24),
         const Text(
           '¡Tu bonche está listo!',
@@ -308,10 +315,7 @@ class _BoncheSetupScreenState extends State<BoncheSetupScreen> {
             children: [
               const Text('CÓDIGO DE INVITACIÓN', style: AppText.label),
               const SizedBox(height: 8),
-              Text(
-                code,
-                style: AppText.display.copyWith(letterSpacing: 3),
-              ),
+              Text(code, style: AppText.display.copyWith(letterSpacing: 3)),
             ],
           ),
         ),
@@ -325,7 +329,8 @@ class _BoncheSetupScreenState extends State<BoncheSetupScreen> {
         PrimaryButton(
           label: 'Copiar invitación',
           icon: Icons.share_rounded,
-          onPressed: () => _copy(invitation, 'Invitación copiada. ¡Pégala en tu chat!'),
+          onPressed: () =>
+              _copy(invitation, 'Invitación copiada. ¡Pégala en tu chat!'),
         ),
         const SizedBox(height: 12),
         SecondaryButton(

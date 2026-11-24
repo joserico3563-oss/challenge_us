@@ -12,21 +12,28 @@ class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   void _openChallenge(BuildContext context, Challenge challenge) {
-    Navigator.of(context).pushNamed(
-      AppRoutes.challengeDetail,
-      arguments: challenge.id,
-    );
+    Navigator.of(context)
+        .pushNamed(AppRoutes.challengeDetail, arguments: challenge.id);
   }
 
-  List<Widget> _buildContent(BuildContext context, AppState state, DateTime now) {
+  List<Widget> _buildContent(
+    BuildContext context,
+    AppState state,
+    DateTime now,
+  ) {
     if (state.challengesLoading || state.socialLoading) {
       return const [
-        SizedBox(height: 280, child: LoadingView(label: 'Cargando tus retos...')),
+        SizedBox(
+          height: 280,
+          child: LoadingView(label: 'Cargando tus retos...'),
+        ),
       ];
     }
     final error = state.challengesError;
     if (error != null) {
-      return [ErrorStateView(message: error, onRetry: () => state.loadChallenges())];
+      return [
+        ErrorStateView(message: error, onRetry: () => state.loadChallenges()),
+      ];
     }
 
     final group = state.group;
@@ -43,10 +50,9 @@ class HomeScreen extends StatelessWidget {
               : 'Cuando el líder configure los horarios, aquí van a caer los retos.',
           actionLabel: leader ? 'Configurar retos' : null,
           onAction: leader
-              ? () => Navigator.of(context).pushNamed(
-                    AppRoutes.boncheConfig,
-                    arguments: false,
-                  )
+              ? () =>
+                    Navigator.of(context)
+                        .pushNamed(AppRoutes.boncheConfig, arguments: false)
               : null,
         ),
       ];
@@ -171,13 +177,12 @@ class _CookingCard extends StatelessWidget {
             width: 84,
             height: 84,
             decoration: const BoxDecoration(
-              color: AppColors.yellowSoft,
+              color: Colors.transparent,
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.local_fire_department_rounded,
-              size: 44,
-              color: AppColors.yellow,
+            child: Image.asset(
+              'assets/larecocha/branding/llamareto.png',
+              fit: BoxFit.contain,
             ),
           ),
           const SizedBox(height: 20),
@@ -330,8 +335,8 @@ class _PendingVotesCard extends StatelessWidget {
     final timeText = remaining == null
         ? null
         : (remaining.isNegative
-            ? 'Cerrando la votación...'
-            : 'Cierra en ${formatRemaining(remaining)}');
+              ? 'Cerrando la votación...'
+              : 'Cierra en ${formatRemaining(remaining)}');
 
     return CCCard(
       highlight: true,

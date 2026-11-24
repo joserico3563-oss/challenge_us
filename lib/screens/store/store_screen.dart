@@ -1,3 +1,5 @@
+import '../../widgets/barras_icon.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../app/app_scope.dart';
@@ -37,11 +39,7 @@ class _StoreScreenState extends State<StoreScreen> {
             const SizedBox(height: 16),
             Row(
               children: [
-                const Icon(
-                  Icons.monetization_on_rounded,
-                  color: AppColors.yellow,
-                  size: 20,
-                ),
+                const BarrasIcon(size: 20),
                 const SizedBox(width: 6),
                 Text('${item.price} Barras', style: AppText.heading),
               ],
@@ -51,7 +49,9 @@ class _StoreScreenState extends State<StoreScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
-            style: TextButton.styleFrom(foregroundColor: AppColors.textSecondary),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.textSecondary,
+            ),
             child: const Text('Cancelar'),
           ),
           FilledButton(
@@ -74,7 +74,8 @@ class _StoreScreenState extends State<StoreScreen> {
       PurchaseResult.failed =>
         state.lastPurchaseError ?? 'No pudimos completar la compra.',
     };
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -111,7 +112,11 @@ class _StoreScreenState extends State<StoreScreen> {
         const CCCard(
           child: Row(
             children: [
-              Icon(Icons.military_tech_rounded, color: AppColors.yellow, size: 28),
+              Icon(
+                Icons.military_tech_rounded,
+                color: AppColors.yellow,
+                size: 28,
+              ),
               SizedBox(width: 12),
               Expanded(
                 child: Text(
@@ -179,14 +184,10 @@ class _CoinsCard extends StatelessWidget {
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              color: AppColors.yellow,
+              color: Colors.transparent,
               borderRadius: BorderRadius.circular(20),
             ),
-            child: const Icon(
-              Icons.monetization_on_rounded,
-              color: AppColors.onYellow,
-              size: 34,
-            ),
+            child: const BarrasIcon(size: 34),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -245,13 +246,15 @@ class _StoreItemCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: 52,
-                height: 52,
+                width: 76,
+                height: 76,
                 decoration: BoxDecoration(
-                  color: AppColors.yellowSoft,
+                  color: Colors.transparent,
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Icon(item.icon, color: AppColors.yellow, size: 28),
+                child: item.assetPath != null
+                    ? Image.asset(item.assetPath!, fit: BoxFit.contain)
+                    : Icon(item.icon, color: AppColors.yellow),
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -265,7 +268,10 @@ class _StoreItemCard extends StatelessWidget {
                       children: [
                         Text(item.name, style: AppText.heading),
                         if (owned > 0 && !item.oneTime)
-                          InfoPill(label: 'Tienes $owned', color: AppColors.success),
+                          InfoPill(
+                            label: 'Tienes $owned',
+                            color: AppColors.success,
+                          ),
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -278,11 +284,7 @@ class _StoreItemCard extends StatelessWidget {
           const SizedBox(height: 16),
           Row(
             children: [
-              const Icon(
-                Icons.monetization_on_rounded,
-                color: AppColors.yellow,
-                size: 22,
-              ),
+              const BarrasIcon(size: 22),
               const SizedBox(width: 6),
               Text('${item.price}', style: AppText.title),
               const Spacer(),
@@ -315,20 +317,25 @@ class _InventoryRow extends StatelessWidget {
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
-              color: AppColors.yellowSoft,
+              color: Colors.transparent,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(item.icon, color: AppColors.yellow, size: 22),
+            child: item.assetPath != null
+                ? Image.asset(item.assetPath!, fit: BoxFit.contain)
+                : Icon(item.icon, color: AppColors.yellow),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item.name, style: AppText.body.copyWith(fontWeight: FontWeight.w700)),
+                Text(
+                  item.name,
+                  style: AppText.body.copyWith(fontWeight: FontWeight.w700),
+                ),
                 const SizedBox(height: 2),
                 Text(
                   item.appliesAutomatically

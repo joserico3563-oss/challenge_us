@@ -68,7 +68,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         final items = state.notifications;
         final unread = state.unreadNotifications;
 
-        return Scaffold(
+        return RecochaScaffold(
           appBar: ccAppBar(
             'Notificaciones',
             actions: [
@@ -83,8 +83,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               ? const EmptyStateView(
                   icon: Icons.notifications_none_rounded,
                   title: 'Sin notificaciones',
-                  message:
-                      'Aquí verás cuando salga un reto nuevo, tengas evidencias por calificar o recibas una recompensa.',
+                  message: 'Aquí verás cuando salga un reto nuevo, tengas evidencias por calificar o recibas una recompensa.',
                 )
               : ListView(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
@@ -95,8 +94,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         unread == 0
                             ? 'Estás al día.'
                             : (unread == 1
-                                ? 'Tienes 1 notificación sin leer'
-                                : 'Tienes $unread notificaciones sin leer'),
+                                  ? 'Tienes 1 notificación sin leer'
+                                  : 'Tienes $unread notificaciones sin leer'),
                         style: AppText.bodyMuted,
                       ),
                     ),

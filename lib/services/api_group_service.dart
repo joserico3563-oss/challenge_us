@@ -35,6 +35,8 @@ class ApiGroupService implements GroupService {
             name: m.name,
             level: LevelSystem.fromXp(m.xp).level,
             streak: m.streak,
+            xp: m.xp,
+            completedChallenges: m.completedChallenges,
           ),
       ],
     );

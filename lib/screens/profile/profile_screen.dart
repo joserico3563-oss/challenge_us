@@ -26,7 +26,7 @@ class ProfileScreen extends StatelessWidget {
     final user = state.user;
     final level = state.levelInfo;
 
-    return Scaffold(
+    return RecochaScaffold(
       appBar: ccAppBar('Perfil / Mi Muro'),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),

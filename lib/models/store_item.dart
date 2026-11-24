@@ -23,6 +23,18 @@ class StoreItem {
   final String description;
   final int price;
   final IconData icon;
+
+  String? get assetPath => switch (id) {
+    'double_xp' => 'assets/larecocha/shop/doblexp.png',
+    'streak_shield' => 'assets/larecocha/shop/bloquearracha.png',
+    'extra_time' => 'assets/larecocha/shop/tiempoextra.png',
+    'swap_challenge' => 'assets/larecocha/shop/cambiarreto.png',
+    'pick_challenge' => 'assets/larecocha/shop/escogerreto.png',
+    'avatar_frame' => 'assets/larecocha/shop/marcodorado.png',
+    'stickers' => 'assets/larecocha/branding/stickers.png',
+    _ => null,
+  };
+
   final StoreItemKind kind;
 
   /// Si es true solo se puede comprar una vez (cosméticos).

@@ -48,14 +48,13 @@ class _VoteScreenState extends State<VoteScreen> {
         final state = AppScope.of(context);
         final items = state.pendingVotes;
 
-        return Scaffold(
+        return RecochaScaffold(
           appBar: ccAppBar('Calificar evidencias'),
           body: items.isEmpty
               ? const EmptyStateView(
                   icon: Icons.how_to_vote_rounded,
                   title: 'Todo calificado',
-                  message:
-                      'Por el momento no hay ninguna evidencia o ya las calificaste todas.',
+                  message: 'Por el momento no hay ninguna evidencia o ya las calificaste todas.',
                 )
               : ListView(
                   padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
@@ -109,8 +108,8 @@ class _EvidenceVoteCard extends StatelessWidget {
     final timeText = remaining == null
         ? null
         : (remaining.isNegative
-            ? 'Cerrando la votación...'
-            : 'Cierra en ${formatRemaining(remaining)}');
+              ? 'Cerrando la votación...'
+              : 'Cierra en ${formatRemaining(remaining)}');
 
     return CCCard(
       padding: const EdgeInsets.all(14),

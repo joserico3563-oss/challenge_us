@@ -7,12 +7,16 @@ class GroupMember {
     required this.name,
     required this.level,
     required this.streak,
+    this.xp,
+    this.completedChallenges,
   });
 
   final String id;
   final String name;
   final int level;
   final int streak;
+  final int? xp;
+  final int? completedChallenges;
 
   String get initials => initialsFromName(name);
 
@@ -25,12 +29,20 @@ class GroupMember {
     return parts.isEmpty ? 'Jugador' : parts.first;
   }
 
-  GroupMember copyWith({String? name, int? level, int? streak}) {
+  GroupMember copyWith({
+    String? name,
+    int? level,
+    int? streak,
+    int? xp,
+    int? completedChallenges,
+  }) {
     return GroupMember(
       id: id,
       name: name ?? this.name,
       level: level ?? this.level,
       streak: streak ?? this.streak,
+      xp: xp ?? this.xp,
+      completedChallenges: completedChallenges ?? this.completedChallenges,
     );
   }
 }
