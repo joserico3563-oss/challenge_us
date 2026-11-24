@@ -66,6 +66,7 @@ class AppState extends ChangeNotifier {
   int _unreadNotifications = 0;
   Timer? _cycleTimer;
   bool _cycleBusy = false;
+  bool _deletingGroup = false;
   int _cycleTick = 0;
 
   /// Motivo del último fallo de compra (null si no hubo).
@@ -417,9 +418,42 @@ class AppState extends ChangeNotifier {
   /// evidencias por calificar y resultados nuevos. Todo lo calcula el backend.
   Future<void> refreshCycle() async {
     final me = _user;
-    if (me == null || _cycleBusy || _disposed) return;
+    if (me == null || _cycleBusy || _disposed ||
+        _deletingGroup || _socialLoading) {
+      return;
+    }
     _cycleBusy = true;
     try {
+      final serverGroup = await groupService.fetchGroup(me.id);
+
+      if (_disposed || _user?.id != me.id || _deletingGroup ||
+          _socialLoading) {
+        return;
+      }
+
+      if (serverGroup?.id != _group?.id) {
+        _group = serverGroup;
+        _challenges = const [];
+        _challengesError = null;
+        _completedIds.clear();
+        _evidenceByChallenge.clear();
+        _progress.clear();
+        _pendingVotes = const [];
+        _rewardNotices = const [];
+        _notifications = const [];
+        _unreadNotifications = 0;
+        _weeklyBoard = null;
+        _monthlyBoard = null;
+        _rankingMembers.clear();
+        _messages = const [];
+        _sessionPoints = 0;
+        _sessionCompleted = 0;
+        _cycleTick = 0;
+
+        await loadSocial();
+        return;
+      }
+
       final profile = await ApiService.getMe();
       final groupId = _group?.id ?? '';
       final statuses = groupId.isEmpty
@@ -435,7 +469,10 @@ class AppState extends ChangeNotifier {
       }
 
       final current = _user;
-      if (_disposed || current == null || current.id != me.id) return;
+      if (_disposed || current == null || current.id != me.id ||
+          _deletingGroup || (_group?.id ?? '') != groupId) {
+        return;
+      }
       _user = current.copyWith(
         xp: profile.xp,
         coins: profile.coins,
@@ -518,6 +555,7 @@ class AppState extends ChangeNotifier {
         now,
         boncheId: groupId,
       );
+      if (_deletingGroup || _group?.id != groupId) return;
       _weeklyBoard = weekly;
       _monthlyBoard = monthly;
       _notify();
@@ -632,6 +670,62 @@ class AppState extends ChangeNotifier {
       return null;
     } catch (e) {
       return e.toString().replaceFirst('Exception: ', '');
+    }
+  }
+
+  Future<String?> deleteCurrentGroup(String expectedGroupId) async {
+    final current = _group;
+    final me = _user;
+
+    if (current == null || me == null ||
+        current.id != expectedGroupId) {
+      return 'No encontramos tu bonche.';
+    }
+
+    if (!isLeader) {
+      return 'Solo el lider puede eliminar el Bonche.';
+    }
+
+    if (_deletingGroup || _socialLoading || _challengesLoading) {
+      return 'Espera un momento e intentalo nuevamente.';
+    }
+
+    _deletingGroup = true;
+    _stopCycle();
+
+    try {
+      await groupService.deleteGroup(current.id);
+
+      if (_disposed || _user?.id != me.id) return null;
+
+      _group = null;
+      _challenges = const [];
+      _challengesError = null;
+      _completedIds.clear();
+      _evidenceByChallenge.clear();
+      _progress.clear();
+      _pendingVotes = const [];
+      _rewardNotices = const [];
+      _notifications = const [];
+      _unreadNotifications = 0;
+      _weeklyBoard = null;
+      _monthlyBoard = null;
+      _rankingMembers.clear();
+      _messages = const [];
+      _sessionPoints = 0;
+      _sessionCompleted = 0;
+      _socialError = null;
+      _cycleTick = 0;
+
+      await loadSocial();
+      return null;
+    } catch (error) {
+      return _messageOf(error) ??
+          'No pudimos eliminar el Bonche.';
+    } finally {
+      _deletingGroup = false;
+      if (!_disposed && _user != null) _startCycle();
+      _notify();
     }
   }
 

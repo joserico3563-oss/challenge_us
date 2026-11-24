@@ -6,6 +6,8 @@ abstract class GroupService {
   /// Bonche del usuario, o null si todavia no esta en ninguno.
   Future<GroupInfo?> fetchGroup(String userId);
 
+  Future<void> deleteGroup(String groupId);
+
   Future<void> createGroup({
     required String name,
     required String description,
@@ -30,6 +32,11 @@ abstract class GroupService {
 
 class MockGroupService implements GroupService {
   const MockGroupService();
+
+  @override
+  Future<void> deleteGroup(String groupId) async {
+    throw UnsupportedError('El servicio mock no elimina bonches.');
+  }
 
   @override
   Future<GroupInfo?> fetchGroup(String userId) async {

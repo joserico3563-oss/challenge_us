@@ -445,6 +445,15 @@ class ApiService {
     ];
   }
 
+  static Future<void> deleteBonche(String boncheId) async {
+    await _send(
+      () => http.delete(
+        Uri.parse('$baseUrl/api/bonches/$boncheId'),
+        headers: _headers(),
+      ),
+    );
+  }
+
   static Future<Map<String, dynamic>> updateBonche({
     required String boncheId,
     required String userId,

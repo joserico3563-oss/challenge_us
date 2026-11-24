@@ -30,10 +30,40 @@ class BoncheScreen extends StatelessWidget {
     }
     final group = state.group;
     if (group == null) {
-      return const EmptyStateView(
-        icon: Icons.groups_rounded,
-        title: 'Aún no tienes bonche',
-        message: 'Cuando te unas a un grupo privado, aparecerá aquí.',
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.groups_rounded,
+                size: 64,
+                color: AppColors.yellow,
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Ya no tienes Bonche',
+                style: AppText.heading,
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Crea otro Bonche o únete al de tus amigos.',
+                textAlign: TextAlign.center,
+                style: AppText.bodyMuted,
+              ),
+              const SizedBox(height: 24),
+              PrimaryButton(
+                label: 'Crear o unirme a un Bonche',
+                onPressed: () =>
+                    Navigator.of(context).pushNamedAndRemoveUntil(
+                  AppRoutes.boncheSetup,
+                  (route) => false,
+                ),
+              ),
+            ],
+          ),
+        ),
       );
     }
 

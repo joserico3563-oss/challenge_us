@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../app/app_scope.dart';
+import '../../navigation/app_routes.dart';
 import '../../theme/theme.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/widgets.dart';
@@ -24,6 +25,7 @@ class _BoncheConfigScreenState extends State<BoncheConfigScreen> {
   int _count = 3;
   int _window = 90;
   bool _saving = false;
+  bool _deleting = false;
   String? _error;
 
   int get _maxWindow => 180 - (_count - 2) * 20;
@@ -110,7 +112,87 @@ class _BoncheConfigScreenState extends State<BoncheConfigScreen> {
     return null;
   }
 
+  Future<void> _deleteBonche() async {
+    if (_saving || _deleting || widget.isSetup) return;
+
+    final app = AppScope.read(context);
+    final group = app.group;
+    if (!app.isLeader || group == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        icon: const Icon(
+          Icons.warning_amber_rounded,
+          color: AppColors.error,
+          size: 42,
+        ),
+        title: const Text(
+          '\u00bfVas a acabar con el Bonche?',
+          textAlign: TextAlign.center,
+          style: AppText.heading,
+        ),
+        content: const Text(
+          'Se eliminar\u00e1n permanentemente el Bonche, sus retos, '
+          'evidencias y ranking. Todos los integrantes quedar\u00e1n '
+          'desvinculados.\\n\\n'
+          'Las cuentas, XP, Barras y compras se conservar\u00e1n.\\n\\n'
+          'Esta acci\u00f3n no se puede deshacer.',
+          style: AppText.body,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text(
+              'Cancelar',
+              style: TextStyle(color: AppColors.textSecondary),
+            ),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('S\u00ed, eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted || confirmed != true) return;
+
+    setState(() {
+      _deleting = true;
+      _error = null;
+    });
+
+    final error = await app.deleteCurrentGroup(group.id);
+
+    if (!mounted) return;
+
+    if (error != null) {
+      setState(() {
+        _deleting = false;
+        _error = error;
+      });
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Bonche eliminado correctamente.')),
+    );
+
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      app.group == null ? AppRoutes.boncheSetup : AppRoutes.main,
+      (route) => false,
+    );
+  }
+
   Future<void> _save() async {
+    if (_deleting || _saving) return;
     final problem = _validate();
     if (problem != null) {
       setState(() => _error = problem);
@@ -276,6 +358,33 @@ class _BoncheConfigScreenState extends State<BoncheConfigScreen> {
             loading: _saving,
             onPressed: _save,
           ),
+          if (!widget.isSetup && app.isLeader) ...[
+            const SizedBox(height: 24),
+            OutlinedButton.icon(
+              onPressed: _saving || _deleting ? null : _deleteBonche,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.error,
+                side: const BorderSide(color: AppColors.error),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              icon: _deleting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.error,
+                      ),
+                    )
+                  : const Icon(Icons.delete_outline_rounded),
+              label: Text(
+                _deleting ? 'Eliminando Bonche...' : 'Eliminar Bonche',
+              ),
+            ),
+          ],
         ],
       ),
     );

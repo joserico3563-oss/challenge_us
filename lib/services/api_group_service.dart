@@ -8,6 +8,11 @@ class ApiGroupService implements GroupService {
   const ApiGroupService();
 
   @override
+  Future<void> deleteGroup(String groupId) async {
+    await ApiService.deleteBonche(groupId);
+  }
+
+  @override
   Future<GroupInfo?> fetchGroup(String userId) async {
     if (userId.isEmpty) return null;
     final bonches = await ApiService.getUserBonches(userId);
