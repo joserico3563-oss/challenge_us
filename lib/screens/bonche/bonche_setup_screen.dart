@@ -49,7 +49,20 @@ class _BoncheSetupScreenState extends State<BoncheSetupScreen> {
   Future<void> _logout() async {
     final app = AppScope.read(context);
     final navigator = Navigator.of(context);
-    await app.signOut();
+    try {
+      await app.signOut();
+    } catch (_) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No pudimos cerrar tu sesion. Revisa tu conexion e intentalo de nuevo.',
+          ),
+        ),
+      );
+      return;
+    }
+    if (!context.mounted) return;
     navigator.pushNamedAndRemoveUntil(AppRoutes.welcome, (route) => false);
   }
 

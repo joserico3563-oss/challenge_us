@@ -1,5 +1,6 @@
 import 'dart:async' show unawaited;
 import 'dart:io' show File;
+import 'package:flutter/foundation.dart';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
@@ -53,6 +54,7 @@ class _EvidenceCaptureScreenState extends State<EvidenceCaptureScreen>
   bool _canSwitchCamera = false;
 
   String? _photoPath;
+  Uint8List? _photoBytes;
   String _errorMessage = '';
   bool _errorRetryable = true;
 
@@ -163,6 +165,11 @@ class _EvidenceCaptureScreenState extends State<EvidenceCaptureScreen>
     final permissions = _permissions;
     if (challenge == null || permissions == null) return;
 
+    if (kIsWeb) {
+      await _startCamera();
+      return;
+    }
+
     _setPhase(_Phase.checking);
     for (final permission in challenge.requiredPermissions) {
       final outcome = await permissions.check(permission);
@@ -191,6 +198,10 @@ class _EvidenceCaptureScreenState extends State<EvidenceCaptureScreen>
 
   /// Lanza el diálogo REAL de permisos de Android.
   Future<void> _requestPermission() async {
+    if (kIsWeb) {
+      await _startCamera();
+      return;
+    }
     final permissions = _permissions;
     if (permissions == null) return;
     _setPhase(_Phase.requesting);
@@ -329,10 +340,16 @@ class _EvidenceCaptureScreenState extends State<EvidenceCaptureScreen>
         unawaited(_deleteQuietly(file.path));
         return;
       }
+      final bytes = await file.readAsBytes();
+      if (!mounted || _phase != _Phase.capturing) {
+        unawaited(_deleteQuietly(file.path));
+        return;
+      }
       _photoPath = file.path;
+      _photoBytes = bytes;
       await _releaseCamera();
       _setPhase(_Phase.review);
-    } on CameraException catch (_) {
+    } catch (_) {
       if (!mounted || _phase != _Phase.capturing) return;
       await _releaseCamera();
       _fail('No pudimos tomar la foto. Inténtalo de nuevo.');
@@ -355,7 +372,7 @@ class _EvidenceCaptureScreenState extends State<EvidenceCaptureScreen>
     _setPhase(_Phase.submitting);
     try {
       // Comprueba que la foto realmente exista antes de enviarla.
-      final exists = await File(path).exists();
+      final exists = _photoBytes?.isNotEmpty ?? false;
       if (!mounted) return;
       if (!exists) {
         _showMessage('No encontramos la foto. Toma otra, por favor.');
@@ -370,7 +387,11 @@ class _EvidenceCaptureScreenState extends State<EvidenceCaptureScreen>
         type: challenge.evidenceType,
         capturedAt: DateTime.now(),
       );
-      final result = await app.completeChallenge(challenge, evidence);
+      final result = await app.completeChallenge(
+        challenge,
+        evidence,
+        photoBytes: _photoBytes,
+      );
       if (!mounted) return;
       if (result.approved) {
         _confirmed = true;
@@ -393,10 +414,12 @@ class _EvidenceCaptureScreenState extends State<EvidenceCaptureScreen>
   void _discardPhoto() {
     final path = _photoPath;
     _photoPath = null;
+    _photoBytes = null;
     if (path != null) unawaited(_deleteQuietly(path));
   }
 
   Future<void> _deleteQuietly(String path) async {
+    if (kIsWeb) return;
     try {
       final file = File(path);
       if (await file.exists()) await file.delete();
@@ -583,7 +606,7 @@ class _EvidenceCaptureScreenState extends State<EvidenceCaptureScreen>
   }
 
   Widget _buildReview() {
-    final path = _photoPath;
+    final bytes = _photoBytes;
     final submitting = _phase == _Phase.submitting;
 
     return Column(
@@ -596,10 +619,10 @@ class _EvidenceCaptureScreenState extends State<EvidenceCaptureScreen>
               borderRadius: BorderRadius.circular(24),
               child: ColoredBox(
                 color: Colors.black,
-                child: path == null
+                child: bytes == null
                     ? const SizedBox.shrink()
-                    : Image.file(
-                        File(path),
+                    : Image.memory(
+                        bytes,
                         fit: BoxFit.cover,
                         width: double.infinity,
                         height: double.infinity,

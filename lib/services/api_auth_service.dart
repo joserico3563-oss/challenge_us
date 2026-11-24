@@ -69,12 +69,21 @@ class ApiAuthService implements AuthService {
 
   @override
   Future<void> signOut() async {
-    ApiService.clearSession();
+    await ApiService.logout();
+  }
+
+  Future<UserProfile?> restoreSession() async {
+    final user = await ApiService.restoreWebSession();
+    if (user == null) return null;
+    return _toProfile(user, user.email);
   }
 
   static String _nameFromEmail(String email) {
-    final local =
-        email.split('@').first.replaceAll(RegExp(r'[._\-]+'), ' ').trim();
+    final local = email
+        .split('@')
+        .first
+        .replaceAll(RegExp(r'[._\-]+'), ' ')
+        .trim();
     if (local.isEmpty) return 'Jugador';
     return local
         .split(' ')

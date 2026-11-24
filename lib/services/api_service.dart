@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
+import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:camera/camera.dart' show XFile;
 
 import 'package:http/http.dart' as http;
 
@@ -39,26 +42,58 @@ typedef ApiSession = ({String token, UserModel user});
 /// Guarda el JWT en memoria y lo adjunta automáticamente a las rutas privadas,
 /// de modo que ningún servicio tenga que repetir la cabecera.
 class ApiService {
-  static const String baseUrl = "https://challengeus-api.onrender.com";
+  static String get baseUrl =>
+      kIsWeb ? Uri.base.origin : "https://challengeus-api.onrender.com";
 
   static const Duration _timeout = Duration(seconds: 60);
 
   static String? _token;
+  static bool _webSession = false;
 
   /// Se dispara cuando la API responde 401 y la sesión deja de ser válida.
   static void Function()? onUnauthorized;
 
-  static bool get hasSession => _token != null && _token!.isNotEmpty;
+  static bool get hasSession =>
+      kIsWeb ? _webSession : _token != null && _token!.isNotEmpty;
 
   static set token(String? value) => _token = value;
 
-  static void clearSession() => _token = null;
+  static void clearSession() {
+    _token = null;
+    _webSession = false;
+  }
+
+  static Future<void> logout() async {
+    if (kIsWeb) {
+      await _send(
+        () => http.post(
+          Uri.parse('$baseUrl/api/auth/logout'),
+          headers: _headers(json: true),
+          body: '{}',
+        ),
+      );
+    }
+    clearSession();
+  }
+
+  static Future<UserModel?> restoreWebSession() async {
+    if (!kIsWeb) return null;
+
+    try {
+      final user = await getMe();
+      _webSession = true;
+      return user;
+    } on ApiAuthException {
+      clearSession();
+      return null;
+    }
+  }
 
   static Map<String, String> _headers({bool json = false}) {
     final headers = <String, String>{};
     if (json) headers['Content-Type'] = 'application/json';
     final current = _token;
-    if (current != null && current.isNotEmpty) {
+    if (!kIsWeb && current != null && current.isNotEmpty) {
       headers['Authorization'] = 'Bearer $current';
     }
     return headers;
@@ -73,7 +108,7 @@ class ApiService {
       throw const ApiException(
         'El servidor tardó demasiado en responder. Revisa tu conexión.',
       );
-    } on SocketException {
+    } on http.ClientException {
       throw const ApiException(
         'No pudimos conectar con el servidor. Revisa tu internet.',
       );
@@ -138,12 +173,13 @@ class ApiService {
     if (data is! Map<String, dynamic>) throw ApiException(fallback);
     final token = (data['token'] ?? '').toString();
     final raw = data['user'] ?? data['usuario'];
-    if (token.isEmpty || raw is! Map<String, dynamic>) {
+    if ((!kIsWeb && token.isEmpty) || raw is! Map<String, dynamic>) {
       throw ApiException(fallback);
     }
     final user = UserModel.fromJson(raw);
-    _token = token;
-    return (token: token, user: user);
+    _token = kIsWeb ? null : token;
+    _webSession = kIsWeb;
+    return (token: kIsWeb ? '' : token, user: user);
   }
 
   // ---------------------------------------------------------------- retos
@@ -178,9 +214,10 @@ class ApiService {
   static Future<Map<String, dynamic>> uploadEvidence({
     required String boncheRetoId,
     required String filePath,
+    Uint8List? photoBytes,
   }) async {
-    final file = File(filePath);
-    if (!await file.exists()) {
+    final bytes = photoBytes ?? await XFile(filePath).readAsBytes();
+    if (bytes.isEmpty) {
       throw const ApiException(
         'No encontramos la foto en el teléfono. Toma otra, por favor.',
       );
@@ -193,7 +230,9 @@ class ApiService {
     request.headers.addAll(_headers());
     request.fields["bonche_reto_id"] = boncheRetoId;
     // El tipo real lo valida el servidor leyendo el archivo, no el cliente.
-    request.files.add(await http.MultipartFile.fromPath("file", filePath));
+    request.files.add(
+      http.MultipartFile.fromBytes("file", bytes, filename: "evidencia.jpg"),
+    );
 
     final http.Response response;
     try {
@@ -203,7 +242,7 @@ class ApiService {
       throw const ApiException(
         'La foto tardó demasiado en subir. Revisa tu conexión e inténtalo otra vez.',
       );
-    } on SocketException {
+    } on http.ClientException {
       throw const ApiException(
         'No pudimos conectar con el servidor. Revisa tu internet.',
       );
@@ -443,6 +482,16 @@ class ApiService {
       for (final item in data)
         if (item is Map<String, dynamic>) BoncheModel.fromJson(item),
     ];
+  }
+
+  static Future<void> leaveBonche(String boncheId) async {
+    await _send(
+      () => http.post(
+        Uri.parse('$baseUrl/api/bonches/$boncheId/leave'),
+        headers: _headers(json: true),
+        body: '{}',
+      ),
+    );
   }
 
   static Future<void> deleteBonche(String boncheId) async {

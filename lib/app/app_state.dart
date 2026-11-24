@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 
 import '../models/models.dart';
 import '../services/api_service.dart';
+import '../services/api_auth_service.dart';
 import '../services/services.dart';
 
 /// Estado global de la aplicación (en memoria).
@@ -116,7 +117,8 @@ class AppState extends ChangeNotifier {
     return null;
   }
 
-  Evidence? evidenceFor(String challengeId) => _evidenceByChallenge[challengeId];
+  Evidence? evidenceFor(String challengeId) =>
+      _evidenceByChallenge[challengeId];
 
   /// Estado personal de un reto en el instante [at] (por defecto, ahora).
   ChallengeStatus statusOf(Challenge challenge, [DateTime? at]) {
@@ -134,7 +136,8 @@ class AppState extends ChangeNotifier {
   int groupCompleted(Challenge challenge) {
     final progress = _progress[challenge.id];
     if (progress != null) return progress.submittedCount;
-    return challenge.completedBy + (_completedIds.contains(challenge.id) ? 1 : 0);
+    return challenge.completedBy +
+        (_completedIds.contains(challenge.id) ? 1 : 0);
   }
 
   /// Reto protagonista de Inicio: activo, luego completado, luego próximo.
@@ -303,16 +306,13 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
-    try {
-      await authService.signOut();
-    } finally {
-      _stopCycle();
-      _user = null;
-      _challenges = const [];
-      _challengesError = null;
-      _resetSession();
-      _notify();
-    }
+    await authService.signOut();
+    _stopCycle();
+    _user = null;
+    _challenges = const [];
+    _challengesError = null;
+    _resetSession();
+    _notify();
   }
 
   void _resetSession() {
@@ -343,7 +343,9 @@ class AppState extends ChangeNotifier {
     _challengesError = null;
     _notify();
     try {
-      _challenges = await challengeService.fetchTodayChallenges(_group?.id ?? '');
+      _challenges = await challengeService.fetchTodayChallenges(
+        _group?.id ?? '',
+      );
     } catch (_) {
       _challengesError = 'No pudimos cargar los retos de hoy.';
     } finally {
@@ -358,9 +360,11 @@ class AppState extends ChangeNotifier {
   /// votación del bonche; aquí solo se registra que la foto fue enviada.
   Future<RewardResult> completeChallenge(
     Challenge challenge,
-    Evidence evidence,
-  ) async {
-    if (_completedIds.contains(challenge.id) && !(_progress[challenge.id]?.canRetry ?? false)) {
+    Evidence evidence, {
+    Uint8List? photoBytes,
+  }) async {
+    if (_completedIds.contains(challenge.id) &&
+        !(_progress[challenge.id]?.canRetry ?? false)) {
       return RewardResult.rejected(
         challengeTitle: challenge.title,
         message: 'Ya enviaste tu evidencia para este reto.',
@@ -371,6 +375,7 @@ class AppState extends ChangeNotifier {
       final data = await ApiService.uploadEvidence(
         boncheRetoId: challenge.id,
         filePath: evidence.filePath,
+        photoBytes: photoBytes,
       );
       _completedIds.add(challenge.id);
       _evidenceByChallenge[challenge.id] = evidence;
@@ -380,7 +385,8 @@ class AppState extends ChangeNotifier {
       return RewardResult(
         approved: true,
         pendingVote: true,
-        message: (data['message'] as String?) ??
+        message:
+            (data['message'] as String?) ??
             'Evidencia enviada. Espera la votación de tus vales.',
         challengeTitle: challenge.title,
         streak: user.streak,
@@ -418,16 +424,18 @@ class AppState extends ChangeNotifier {
   /// evidencias por calificar y resultados nuevos. Todo lo calcula el backend.
   Future<void> refreshCycle() async {
     final me = _user;
-    if (me == null || _cycleBusy || _disposed ||
-        _deletingGroup || _socialLoading) {
+    if (me == null ||
+        _cycleBusy ||
+        _disposed ||
+        _deletingGroup ||
+        _socialLoading) {
       return;
     }
     _cycleBusy = true;
     try {
       final serverGroup = await groupService.fetchGroup(me.id);
 
-      if (_disposed || _user?.id != me.id || _deletingGroup ||
-          _socialLoading) {
+      if (_disposed || _user?.id != me.id || _deletingGroup || _socialLoading) {
         return;
       }
 
@@ -454,6 +462,8 @@ class AppState extends ChangeNotifier {
         return;
       }
 
+      _group = serverGroup;
+
       final profile = await ApiService.getMe();
       final groupId = _group?.id ?? '';
       final statuses = groupId.isEmpty
@@ -469,8 +479,11 @@ class AppState extends ChangeNotifier {
       }
 
       final current = _user;
-      if (_disposed || current == null || current.id != me.id ||
-          _deletingGroup || (_group?.id ?? '') != groupId) {
+      if (_disposed ||
+          current == null ||
+          current.id != me.id ||
+          _deletingGroup ||
+          (_group?.id ?? '') != groupId) {
         return;
       }
       _user = current.copyWith(
@@ -673,16 +686,26 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  Future<String?> deleteCurrentGroup(String expectedGroupId) async {
+  Future<String?> leaveCurrentGroup(String expectedGroupId) {
+    return _detachCurrentGroup(expectedGroupId, leave: true);
+  }
+
+  Future<String?> deleteCurrentGroup(String expectedGroupId) {
+    return _detachCurrentGroup(expectedGroupId, leave: false);
+  }
+
+  Future<String?> _detachCurrentGroup(
+    String expectedGroupId, {
+    required bool leave,
+  }) async {
     final current = _group;
     final me = _user;
 
-    if (current == null || me == null ||
-        current.id != expectedGroupId) {
+    if (current == null || me == null || current.id != expectedGroupId) {
       return 'No encontramos tu bonche.';
     }
 
-    if (!isLeader) {
+    if (!leave && !isLeader) {
       return 'Solo el lider puede eliminar el Bonche.';
     }
 
@@ -694,7 +717,11 @@ class AppState extends ChangeNotifier {
     _stopCycle();
 
     try {
-      await groupService.deleteGroup(current.id);
+      if (leave) {
+        await groupService.leaveGroup(current.id);
+      } else {
+        await groupService.deleteGroup(current.id);
+      }
 
       if (_disposed || _user?.id != me.id) return null;
 
@@ -721,7 +748,9 @@ class AppState extends ChangeNotifier {
       return null;
     } catch (error) {
       return _messageOf(error) ??
-          'No pudimos eliminar el Bonche.';
+          (leave
+              ? 'No pudimos salir del Bonche.'
+              : 'No pudimos eliminar el Bonche.');
     } finally {
       _deletingGroup = false;
       if (!_disposed && _user != null) _startCycle();
@@ -740,7 +769,11 @@ class AppState extends ChangeNotifier {
       final (messages, weekly, monthly, items) = await (
         chatService.fetchMessages(),
         rankingService.fetchBoard(RankingPeriod.weekly, now, boncheId: groupId),
-        rankingService.fetchBoard(RankingPeriod.monthly, now, boncheId: groupId),
+        rankingService.fetchBoard(
+          RankingPeriod.monthly,
+          now,
+          boncheId: groupId,
+        ),
         storeService.fetchItems(),
       ).wait;
       _group = group;
@@ -767,9 +800,7 @@ class AppState extends ChangeNotifier {
       await loadChallenges();
       if (_user != null) _startCycle();
     } catch (error) {
-      _socialError = error is ApiAuthException
-          ? error.message
-          : 'No pudimos cargar tu bonche. Revisa tu conexión e inténtalo de nuevo.';
+      _socialError = error is ApiAuthException ? error.message : 'No pudimos cargar tu bonche. Revisa tu conexión e inténtalo de nuevo.';
     } finally {
       _socialLoading = false;
       _notify();
@@ -798,7 +829,8 @@ class AppState extends ChangeNotifier {
     try {
       final receipt = await ApiService.purchaseItem(
         itemId: item.id,
-        requestId: 'rq-${DateTime.now().microsecondsSinceEpoch}-${_idCounter++}',
+        requestId:
+            'rq-${DateTime.now().microsecondsSinceEpoch}-${_idCounter++}',
       );
       _user = user.copyWith(coins: receipt.coins);
       _inventory[item.id] = receipt.quantity;
@@ -853,7 +885,8 @@ class AppState extends ChangeNotifier {
     }
   }
 
-  String _newId() => 'm-${_idCounter++}-${DateTime.now().microsecondsSinceEpoch}';
+  String _newId() =>
+      'm-${_idCounter++}-${DateTime.now().microsecondsSinceEpoch}';
 
   // ----------------------------------------------------------------- interno
 
@@ -861,6 +894,32 @@ class AppState extends ChangeNotifier {
   ///
   /// Se limpia todo lo que dependía del usuario para que ninguna pantalla siga
   /// mostrando datos de una sesión muerta.
+  Future<void> restoreWebSession() async {
+    if (!kIsWeb || _disposed || _authBusy) return;
+
+    final service = authService;
+    if (service is! ApiAuthService) return;
+
+    _authBusy = true;
+    _authError = null;
+    _notify();
+
+    try {
+      final restored = await service.restoreSession();
+      if (_disposed || restored == null) return;
+
+      _user = restored;
+      _resetSession();
+      await loadSocial();
+      if (_user != null && _socialError != null) {
+        throw ApiException(_socialError!);
+      }
+    } finally {
+      _authBusy = false;
+      _notify();
+    }
+  }
+
   void _handleUnauthorized() {
     if (_disposed) return;
     _stopCycle();

@@ -104,6 +104,13 @@ class BoncheScreen extends StatelessWidget {
         const SizedBox(height: 28),
         const SectionTitle('Retos del bonche'),
         _ChallengeSettings(group: group, totalMembers: members.length),
+        if (!state.isLeader || members.length > 1) ...[
+          const SizedBox(height: 28),
+          _LeaveBoncheButton(
+            groupId: group.id,
+            isLeader: state.isLeader,
+          ),
+        ],
       ],
     );
   }
@@ -507,6 +514,123 @@ class _VotesCard extends StatelessWidget {
             onPressed: onTap,
           ),
         ],
+      ),
+    );
+  }
+}
+
+
+class _LeaveBoncheButton extends StatefulWidget {
+  const _LeaveBoncheButton({
+    required this.groupId,
+    required this.isLeader,
+  });
+
+  final String groupId;
+  final bool isLeader;
+
+  @override
+  State<_LeaveBoncheButton> createState() => _LeaveBoncheButtonState();
+}
+
+class _LeaveBoncheButtonState extends State<_LeaveBoncheButton> {
+  bool _busy = false;
+
+  Future<void> _leave() async {
+    if (_busy) return;
+
+    final app = AppScope.read(context);
+
+    setState(() => _busy = true);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.surface,
+        icon: const Icon(
+          Icons.logout_rounded,
+          color: AppColors.error,
+          size: 42,
+        ),
+        title: const Text(
+          '\u00bfVas a salir del Bonche?',
+          textAlign: TextAlign.center,
+          style: AppText.heading,
+        ),
+        content: Text(
+          'Dejar\u00e1s de participar en los retos y el ranking de este Bonche.\n\n'
+          'Conservar\u00e1s tus XP, Barras y compras.'
+          '${widget.isLeader ? "\n\nEl integrante con mayor antig\u00fcedad se convertir\u00e1 en el nuevo l\u00edder." : ""}',
+          style: AppText.body,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: TextButton.styleFrom(
+              foregroundColor: AppColors.error,
+            ),
+            child: const Text('Salir del Bonche'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted) return;
+
+    if (confirmed != true) {
+      setState(() => _busy = false);
+      return;
+    }
+
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
+    final error = await app.leaveCurrentGroup(widget.groupId);
+
+    if (!navigator.mounted) return;
+
+    if (error != null) {
+      if (mounted) setState(() => _busy = false);
+      if (messenger.mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(error)),
+        );
+      }
+      return;
+    }
+
+    navigator.pushNamedAndRemoveUntil(
+      app.group == null ? AppRoutes.boncheSetup : AppRoutes.main,
+      (route) => false,
+    );
+
+    if (messenger.mounted) {
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Has salido del Bonche.')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: _busy ? null : _leave,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: AppColors.error,
+        side: const BorderSide(color: AppColors.error),
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+      ),
+      icon: const Icon(Icons.logout_rounded),
+      label: Text(
+        _busy ? 'Saliendo del Bonche...' : 'Salir del Bonche',
       ),
     );
   }

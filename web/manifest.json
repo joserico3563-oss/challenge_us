@@ -1,11 +1,11 @@
 {
-    "name": "challenge_us",
-    "short_name": "challenge_us",
-    "start_url": ".",
+    "name": "La Recocha",
+    "short_name": "La Recocha",
+    "start_url": "/",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#101D30",
+    "theme_color": "#101D30",
+    "description": "Retos diarios para tu Bonche.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
@@ -31,5 +31,7 @@
             "type": "image/png",
             "purpose": "maskable"
         }
-    ]
+    ],
+    "id": "/",
+    "scope": "/"
 }

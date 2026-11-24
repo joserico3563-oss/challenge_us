@@ -66,3 +66,5 @@ frontend_dump.txt
 
 /volcado_flutter.txt
 /tool/
+
+.wrangler/
