@@ -23,7 +23,7 @@ enum ChallengeDifficulty {
 enum EvidenceType { photo, drawing, voice }
 
 /// Estado personal del usuario frente a un reto.
-enum ChallengeStatus { available, upcoming, completed, expired }
+enum ChallengeStatus { available, upcoming, completed, expired, closed }
 
 class Challenge {
   const Challenge({

@@ -129,6 +129,9 @@ class AppState extends ChangeNotifier {
     if (_completedIds.contains(challenge.id) && !retry) {
       return ChallengeStatus.completed;
     }
+    if (_progress[challenge.id]?.closed == true) {
+      return ChallengeStatus.closed;
+    }
     if (now.isBefore(challenge.startsAt)) return ChallengeStatus.upcoming;
     if (!now.isBefore(challenge.endsAt)) return ChallengeStatus.expired;
     return ChallengeStatus.available;

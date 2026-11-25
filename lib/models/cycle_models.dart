@@ -76,6 +76,7 @@ class ChallengeProgress {
     required this.submittedCount,
     this.attempts = 0,
     this.canRetry = false,
+    this.closed = false,
   });
 
   factory ChallengeProgress.fromJson(Map<String, dynamic> json) {
@@ -87,6 +88,7 @@ class ChallengeProgress {
       submittedCount: (json['submittedCount'] as num?)?.toInt() ?? 0,
       attempts: (json['attempts'] as num?)?.toInt() ?? 0,
       canRetry: json['canRetry'] == true,
+      closed: json['closed'] == true,
     );
   }
 
@@ -101,6 +103,7 @@ class ChallengeProgress {
 
   /// Su evidencia fue rechazada y todavia puede enviar un segundo intento.
   final bool canRetry;
+  final bool closed;
 }
 
 /// Artículo de la tienda tal como lo devuelve la API.

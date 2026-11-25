@@ -45,6 +45,8 @@ extension ChallengeStatusUi on ChallengeStatus {
         return 'Completado';
       case ChallengeStatus.expired:
         return 'Expirado';
+    case ChallengeStatus.closed:
+      return 'Reto finalizado';
     }
   }
 
@@ -58,6 +60,8 @@ extension ChallengeStatusUi on ChallengeStatus {
         return AppColors.success;
       case ChallengeStatus.expired:
         return AppColors.error;
+    case ChallengeStatus.closed:
+      return AppColors.error;
     }
   }
 
@@ -71,6 +75,8 @@ extension ChallengeStatusUi on ChallengeStatus {
         return Icons.check_circle_rounded;
       case ChallengeStatus.expired:
         return Icons.timer_off_rounded;
+    case ChallengeStatus.closed:
+      return Icons.timer_off_rounded;
     }
   }
 }
@@ -89,5 +95,7 @@ String challengeTimeLabel(
       return 'Completado';
     case ChallengeStatus.expired:
       return 'Tiempo agotado';
+    case ChallengeStatus.closed:
+      return 'Reto finalizado';
   }
 }

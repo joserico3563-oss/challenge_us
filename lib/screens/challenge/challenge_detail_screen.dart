@@ -43,6 +43,7 @@ class ChallengeDetailScreen extends StatelessWidget {
           ChallengeStatus.upcoming => 'Aún no empieza',
           ChallengeStatus.completed => 'Reto completado',
           ChallengeStatus.expired => 'Tiempo agotado',
+      ChallengeStatus.closed => 'Reto finalizado',
         };
 
         return RecochaScaffold(
