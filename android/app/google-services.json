@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "990954635047",
+    "project_id": "la-recocha-db025",
+    "storage_bucket": "la-recocha-db025.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:990954635047:android:f09c289fff2b2f98d2f302",
+        "android_client_info": {
+          "package_name": "com.example.challenge_us"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDAD9H47-Mo9zdbQzXDSzS99gbc2EfPyAc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -63,6 +63,26 @@ class ApiService {
     _webSession = false;
   }
 
+  static Future<void> registerPush(String token) async {
+    await _send(
+      () => http.post(
+        Uri.parse('$baseUrl/api/push/register'),
+        headers: _headers(json: true),
+        body: jsonEncode({'token': token}),
+      ),
+    );
+  }
+
+  static Future<void> unregisterPush(String token) async {
+    await _send(
+      () => http.post(
+        Uri.parse('$baseUrl/api/push/unregister'),
+        headers: _headers(json: true),
+        body: jsonEncode({'token': token}),
+      ),
+    );
+  }
+
   static Future<void> logout() async {
     if (kIsWeb) {
       await _send(

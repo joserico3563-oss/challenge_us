@@ -1,3 +1,5 @@
+import '../services/push_service.dart';
+
 import 'dart:async' show Timer, unawaited;
 
 import 'package:flutter/foundation.dart';
@@ -283,6 +285,7 @@ class AppState extends ChangeNotifier {
       _user = await action();
       _resetSession();
       await loadSocial();
+      await PushService.connectAccount();
       return true;
     } catch (error) {
       _user = null;
@@ -306,6 +309,7 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
+    await PushService.disconnectAccount();
     await authService.signOut();
     _stopCycle();
     _user = null;
