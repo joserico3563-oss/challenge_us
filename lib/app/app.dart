@@ -8,6 +8,7 @@ import '../services/api_challenge_service.dart';
 import '../services/api_group_service.dart';
 import '../services/api_social_services.dart';
 import '../services/services.dart';
+import '../services/update_service.dart';
 import '../theme/theme.dart';
 import 'app_scope.dart';
 import 'app_state.dart';
@@ -34,6 +35,8 @@ class _ChallengeUsAppState extends State<ChallengeUsApp> {
     storeService: const ApiStoreService(),
   );
 
+  final _navigatorKey = GlobalKey<NavigatorState>();
+
   bool _restoring = kIsWeb;
   bool _restoreFailed = false;
 
@@ -41,6 +44,75 @@ class _ChallengeUsAppState extends State<ChallengeUsApp> {
   void initState() {
     super.initState();
     if (kIsWeb) _restoreSession();
+
+    if (UpdateService.supported) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _checkForUpdate();
+      });
+    }
+  }
+
+  Future<void> _checkForUpdate() async {
+    final update = await UpdateService.check();
+
+    if (!mounted || update == null) return;
+
+    final context = _navigatorKey.currentContext;
+    if (context == null || !context.mounted) return;
+
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        icon: const Icon(
+          Icons.system_update_rounded,
+          color: Color(0xFFFFD60A),
+          size: 42,
+        ),
+        title: const Text(
+          '?Hay una nueva versi?n!',
+          textAlign: TextAlign.center,
+        ),
+        content: const Text(
+          'Tenemos nuevas mejoras para que sigas disfrutando '
+          'de La Recocha. Descarga la actualizaci?n y abre '
+          'la notificaci?n cuando termine.',
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('M?s tarde'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: const Color(0xFFFFD60A),
+              foregroundColor: Colors.black,
+            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Actualizar ahora'),
+          ),
+        ],
+      ),
+    );
+
+    if (accepted != true || !mounted) return;
+
+    final started = await UpdateService.download(update);
+
+    if (!mounted) return;
+
+    final currentContext = _navigatorKey.currentContext;
+    if (currentContext == null || !currentContext.mounted) return;
+
+    ScaffoldMessenger.maybeOf(currentContext)?.showSnackBar(
+      SnackBar(
+        content: Text(
+          started
+              ? 'Descarga iniciada. Revisa tus notificaciones.'
+              : 'No pudimos iniciar la descarga. Int?ntalo m?s tarde.',
+        ),
+      ),
+    );
   }
 
   Future<void> _restoreSession() async {
@@ -112,6 +184,7 @@ class _ChallengeUsAppState extends State<ChallengeUsApp> {
     return AppScope(
       state: _appState,
       child: MaterialApp(
+        navigatorKey: _navigatorKey,
         title: 'La Recocha',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.dark,
