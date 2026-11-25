@@ -69,19 +69,19 @@ class _ChallengeUsAppState extends State<ChallengeUsApp> {
           size: 42,
         ),
         title: const Text(
-          '?Hay una nueva versi?n!',
+          '\u00A1Hay una nueva versi\u00F3n!',
           textAlign: TextAlign.center,
         ),
         content: const Text(
           'Tenemos nuevas mejoras para que sigas disfrutando '
-          'de La Recocha. Descarga la actualizaci?n y abre '
-          'la notificaci?n cuando termine.',
+          'de La Recocha. Descarga la actualizaci\u00F3n y abre '
+          'la notificaci\u00F3n cuando termine.',
           textAlign: TextAlign.center,
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('M?s tarde'),
+            child: const Text('M\u00E1s tarde'),
           ),
           FilledButton(
             style: FilledButton.styleFrom(
@@ -109,7 +109,7 @@ class _ChallengeUsAppState extends State<ChallengeUsApp> {
         content: Text(
           started
               ? 'Descarga iniciada. Revisa tus notificaciones.'
-              : 'No pudimos iniciar la descarga. Int?ntalo m?s tarde.',
+              : 'No pudimos iniciar la descarga. Int\u00E9ntalo m\u00E1s tarde.',
         ),
       ),
     );
